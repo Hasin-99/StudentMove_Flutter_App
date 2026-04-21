@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "studentmove-dev"
+  },
+  "targets": {
+    "studentmove-dev": {},
+    "studentmove-prod": {}
+  }
+}

@@ -1,0 +1,66 @@
+═══════════════════════════════════════════════════════════════
+  StudentMove Flutter App - QUICK START GUIDE
+═══════════════════════════════════════════════════════════════
+
+📋 PREREQUISITES:
+─────────────────
+1. Flutter SDK installed
+2. Android Studio OR VS Code with Flutter extension
+3. Android Emulator OR Physical Android device
+
+🚀 QUICK START (3 Steps):
+─────────────────────────
+
+STEP 1: Install Flutter (if not installed)
+   → Download: https://flutter.dev/docs/get-started/install/windows
+   → Extract to: C:\src\flutter
+   → Add to PATH: C:\src\flutter\bin
+   → Restart terminal
+
+STEP 2: Open Terminal in Project Folder
+   → Navigate to: E:\Studentmove
+   → Or right-click folder → "Open in Terminal"
+
+STEP 3: Run These Commands:
+   
+   flutter pub get          (Install dependencies)
+   flutter devices          (Check available devices)
+   flutter run              (Run the app)
+
+═══════════════════════════════════════════════════════════════
+
+📱 DEMO CREDENTIALS:
+────────────────────
+Email:    student@example.com
+Password: password123
+
+═══════════════════════════════════════════════════════════════
+
+🔧 TROUBLESHOOTING:
+───────────────────
+
+Problem: "flutter: command not found"
+Solution: 
+  → Flutter not in PATH
+  → Add C:\src\flutter\bin to PATH
+  → Restart terminal
+
+Problem: "No devices found"
+Solution:
+  → Start Android Emulator (Android Studio → Device Manager)
+  → OR connect physical device with USB debugging enabled
+
+Problem: "Android licenses not accepted"
+Solution:
+  → Run: flutter doctor --android-licenses
+  → Accept all licenses (type 'y')
+
+═══════════════════════════════════════════════════════════════
+
+📚 MORE HELP:
+─────────────
+See HOW_TO_RUN.md for detailed instructions
+See SETUP.md for Google Maps configuration
+
+═══════════════════════════════════════════════════════════════
+

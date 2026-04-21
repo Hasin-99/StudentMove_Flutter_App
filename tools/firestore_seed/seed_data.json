@@ -1,0 +1,95 @@
+{
+  "routes": [
+    {
+      "id": "uttara_dsc",
+      "name": "Uttara - DSC",
+      "stops": ["Rajlokkhi", "Airport Road", "DSC"],
+      "active": true
+    },
+    {
+      "id": "uttara_du",
+      "name": "Uttara - DU",
+      "stops": ["Rajlokkhi", "Khilkhet", "TSC"],
+      "active": true
+    },
+    {
+      "id": "dhanmondi_buet",
+      "name": "Dhanmondi - BUET",
+      "stops": ["Dhanmondi 27", "Science Lab", "BUET Gate"],
+      "active": true
+    }
+  ],
+  "schedules": [
+    {
+      "id": "schedule_1",
+      "routeName": "Uttara - DSC",
+      "dayIndex": 0,
+      "timeLabel": "7:00 AM",
+      "dateLabel": "12 May",
+      "origin": "Rajlokkhi",
+      "busCode": "SM-101",
+      "whiteboardNote": "Morning trip",
+      "universityTags": ["DSC", "Dhaka"]
+    },
+    {
+      "id": "schedule_2",
+      "routeName": "Uttara - DU",
+      "dayIndex": 1,
+      "timeLabel": "8:00 AM",
+      "dateLabel": "13 May",
+      "origin": "Rajlokkhi",
+      "busCode": "SM-201",
+      "whiteboardNote": "Campus entry trip",
+      "universityTags": ["DU"]
+    },
+    {
+      "id": "schedule_3",
+      "routeName": "Dhanmondi - BUET",
+      "dayIndex": 2,
+      "timeLabel": "7:20 AM",
+      "dateLabel": "14 May",
+      "origin": "Dhanmondi 27",
+      "busCode": "SM-301",
+      "whiteboardNote": "Weekday run",
+      "universityTags": ["BUET"]
+    }
+  ],
+  "announcements": [
+    {
+      "id": "ann_1",
+      "title": "Route Timing Update",
+      "body": "Morning routes will depart 10 minutes earlier this week.",
+      "isPinned": true,
+      "isVisible": true,
+      "routes": ["Uttara - DSC", "Uttara - DU"],
+      "departments": []
+    },
+    {
+      "id": "ann_2",
+      "title": "Service Advisory",
+      "body": "Expect moderate delays around Airport Road after 8 AM.",
+      "isPinned": false,
+      "isVisible": true,
+      "routes": [],
+      "departments": []
+    }
+  ],
+  "liveBuses": [
+    {
+      "id": "bus_101",
+      "busCode": "SM-101",
+      "lat": 23.835,
+      "lng": 90.398,
+      "heading": 88.0,
+      "speedKmph": 28.0
+    },
+    {
+      "id": "bus_201",
+      "busCode": "SM-201",
+      "lat": 23.850,
+      "lng": 90.405,
+      "heading": 120.0,
+      "speedKmph": 34.0
+    }
+  ]
+}

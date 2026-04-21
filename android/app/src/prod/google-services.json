@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "75291425758",
+    "project_id": "studentmove-prod-f56f6",
+    "storage_bucket": "studentmove-prod-f56f6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:75291425758:android:424deb2586144c48a0bb4f",
+        "android_client_info": {
+          "package_name": "com.example.studentmove"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALabs9qFIoa8ukUUVpLGOTeS04yOd_ysw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
