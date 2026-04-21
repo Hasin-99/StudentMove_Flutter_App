@@ -1,0 +1,38 @@
+name: Firebase Env Check
+
+on:
+  pull_request:
+    paths:
+      - 'tools/check_firebase_env.sh'
+      - 'lib/firebase_options_dev.dart'
+      - 'lib/firebase_options_prod.dart'
+      - 'android/app/src/dev/google-services.json'
+      - 'android/app/src/prod/google-services.json'
+      - 'ios/Runner/Firebase/dev/GoogleService-Info.plist'
+      - 'ios/Runner/Firebase/prod/GoogleService-Info.plist'
+      - '.github/workflows/firebase-env-check.yml'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'tools/check_firebase_env.sh'
+      - 'lib/firebase_options_dev.dart'
+      - 'lib/firebase_options_prod.dart'
+      - 'android/app/src/dev/google-services.json'
+      - 'android/app/src/prod/google-services.json'
+      - 'ios/Runner/Firebase/dev/GoogleService-Info.plist'
+      - 'ios/Runner/Firebase/prod/GoogleService-Info.plist'
+      - '.github/workflows/firebase-env-check.yml'
+
+jobs:
+  firebase-env-check:
+    name: Validate Firebase Env Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Firebase env drift check
+        run: bash ./tools/check_firebase_env.sh

@@ -1,0 +1,27 @@
+CHOICE: Laravel 10 + Filament 3 (admin) + same MySQL as the Flutter app.
+
+1) New project (outside this Flutter folder, or sibling repo):
+   composer create-project laravel/laravel studentmove-api
+   cd studentmove-api
+
+2) Database: import backend/schema.sql (or run migrations you generate from it).
+
+3) Install Filament:
+   composer require filament/filament:"^3.2"
+   php artisan filament:install --panels
+   php artisan make:filament-user
+
+4) Create models + Filament resources for: Route, Bus, Schedule (CRUD for schedules = your admin "data handle").
+
+5) API route GET /api/v1/schedules — see backend/laravel_route_example.php for JSON shape.
+   Register in bootstrap/app.php or RouteServiceProvider with prefix api/v1.
+
+6) CORS (Flutter web / Chrome):
+   config/cors.php — allow http://localhost:* and your Flutter web origin.
+   composer require fruitcake/laravel-cors (if not default in Laravel 10).
+
+7) Flutter points to API:
+   flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000
+   Next Bus Arrival screen calls GET {API_BASE_URL}/api/v1/schedules on open + pull-to-refresh.
+
+8) Production: HTTPS only; admin panel on separate subdomain (e.g. admin.yourdomain.com).
