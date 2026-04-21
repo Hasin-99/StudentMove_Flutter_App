@@ -1,0 +1,65 @@
+═══════════════════════════════════════════════════════════════
+  StudentMove Flutter App - সম্পূর্ণ প্রজেক্ট
+═══════════════════════════════════════════════════════════════
+
+📁 প্রজেক্ট লোকেশন:
+────────────────────
+E:\StudentMove_Flutter_App
+
+📋 প্রজেক্টের কনটেন্ট:
+───────────────────────
+✅ সম্পূর্ণ Flutter Mobile App
+✅ সব স্ক্রিন ইমপ্লিমেন্ট করা হয়েছে
+✅ Authentication System
+✅ Bus Tracking (Google Maps)
+✅ Next Bus Arrival
+✅ Notifications
+✅ Chat Support
+✅ Offers & Subscriptions
+✅ Settings
+✅ Booking System
+
+📱 স্ক্রিনসমূহ:
+───────────────
+1. Splash Screen
+2. Sign In Screen
+3. Sign Up Screen
+4. Home Dashboard
+5. Bus Tracking (Maps)
+6. Next Bus Arrival
+7. Notifications
+8. Chat Support
+9. Offers
+10. Settings
+11. Booking
+
+🚀 কিভাবে রান করবেন:
+─────────────────────
+
+STEP 1: Flutter Install করুন (যদি না থাকে)
+   → https://flutter.dev/docs/get-started/install/windows
+   → C:\src\flutter এ extract করুন
+   → PATH এ add করুন
+
+STEP 2: Terminal এ যান
+   cd E:\StudentMove_Flutter_App
+
+STEP 3: Dependencies Install করুন
+   flutter pub get
+
+STEP 4: App Run করুন
+   flutter run
+
+📝 Demo Login:
+──────────────
+Email: student@example.com
+Password: password123
+
+📚 Documentation:
+─────────────────
+- README.md - প্রজেক্ট সম্পর্কে বিস্তারিত
+- HOW_TO_RUN.md - কিভাবে রান করবেন (বিস্তারিত)
+- QUICK_START.txt - দ্রুত শুরু করার জন্য
+- SETUP.md - Google Maps setup
+
+═══════════════════════════════════════════════════════════════

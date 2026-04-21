@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon: use pooled URL for `url` and the non-pooler "direct" URL for migrations (`prisma migrate deploy`).
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  TRANSPORT_ADMIN
+  VIEWER
+}
+
+enum ChatSenderRole {
+  USER
+  ADMIN
+}
+
+model AppUser {
+  id         String    @id @default(cuid())
+  fullName   String    @map("full_name")
+  email      String    @unique
+  passwordHash String? @map("password_hash")
+  resetTokenHash String? @map("reset_token_hash")
+  resetTokenExpiresAt DateTime? @map("reset_token_expires_at")
+  phone      String?
+  studentId  String?   @unique @map("student_id")
+  department String?
+  preferredRoutes Json @default("[]") @map("preferred_routes")
+  role       UserRole  @default(VIEWER)
+  isActive   Boolean   @default(true) @map("is_active")
+  lastSeenAt DateTime? @map("last_seen_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("users")
+}
+
+model AdminAccount {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  passwordHash String  @map("password_hash")
+  role        UserRole @default(VIEWER)
+  isActive    Boolean  @default(true) @map("is_active")
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("admin_accounts")
+}
+
+/// Route name shown in the Flutter app (e.g. Uttara — DSC).
+model BusRoute {
+  id        String     @id @default(cuid())
+  name      String
+  code      String?
+  normalizedName String @unique @map("normalized_name")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  schedules Schedule[]
+
+  @@map("routes")
+}
+
+model Bus {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  schedules Schedule[]
+
+  @@map("buses")
+}
+
+/// weekday: 0 = Sat … 5 = Thu (matches Flutter tabs).
+model Schedule {
+  id             String   @id @default(cuid())
+  routeId        String   @map("route_id")
+  busId          String   @map("bus_id")
+  weekday        Int
+  timeLabel      String   @map("time_label")
+  dateLabel      String   @map("date_label")
+  origin         String
+  whiteboardNote String?  @map("whiteboard_note")
+  universityTags Json     @map("university_tags")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  route          BusRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  bus            Bus      @relation(fields: [busId], references: [id], onDelete: Restrict)
+
+  @@index([routeId, weekday])
+  @@unique([routeId, busId, weekday, timeLabel, dateLabel, origin], map: "schedules_unique_slot_key")
+  @@map("schedules")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorEmail String   @map("actor_email")
+  actorRole  UserRole @map("actor_role")
+  action     String
+  targetType String   @map("target_type")
+  targetId   String?  @map("target_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([actorEmail])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
+
+model Announcement {
+  id         String   @id @default(cuid())
+  announcementKey String? @unique @map("announcement_key")
+  title      String
+  body       String
+  targetDepartments Json @default("[]") @map("target_departments")
+  targetRoutes Json @default("[]") @map("target_routes")
+  isActive   Boolean  @default(true) @map("is_active")
+  isPinned   Boolean  @default(false) @map("is_pinned")
+  publishAt  DateTime @default(now()) @map("publish_at")
+  expiresAt  DateTime? @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, publishAt])
+  @@index([isPinned, publishAt])
+  @@map("announcements")
+}
+
+model ChatMessage {
+  id         String         @id @default(cuid())
+  userEmail  String         @map("user_email")
+  text       String
+  senderRole ChatSenderRole @map("sender_role")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  @@index([userEmail, createdAt])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
