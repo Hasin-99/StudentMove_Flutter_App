@@ -1,4 +1,6 @@
-# StudentMove - Flutter + Firebase
+# StudentMove_Flutter_App
+
+StudentMove - Flutter + Firebase.
 
 Smart transportation app for Dhaka students, built with Flutter and a Firebase-first backend.
 
