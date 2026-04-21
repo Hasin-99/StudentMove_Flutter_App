@@ -1,0 +1,12 @@
+{
+  "name": "studentmove-admin-claims",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "grant": "node set_admin_claim.mjs grant",
+    "revoke": "node set_admin_claim.mjs revoke"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}
