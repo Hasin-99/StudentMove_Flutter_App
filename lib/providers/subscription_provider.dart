@@ -119,7 +119,15 @@ class SubscriptionProvider extends ChangeNotifier {
     final subDoc = _db.collection('subscriptions').doc(uid);
     _subDocSub = subDoc.snapshots().listen((snap) async {
       final data = snap.data();
-      if (data == null) return;
+      if (data == null) {
+        // Remote doc missing — clear stale local cache for this user.
+        _planName = null;
+        _validUntil = null;
+        _status = null;
+        await _persistLocal();
+        notifyListeners();
+        return;
+      }
       final plan = '${data['planName'] ?? ''}'.trim();
       final status = '${data['status'] ?? ''}'.trim();
       final vu = data['validUntil'];

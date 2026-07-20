@@ -117,6 +117,7 @@ class AuthProvider with ChangeNotifier {
     final trimmed = email.trim().toLowerCase();
     if (!emailPattern.hasMatch(trimmed) || password.length < 8) {
       _lastError = 'Invalid email or weak password';
+      notifyListeners();
       return;
     }
 

@@ -48,6 +48,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Node / Firebase Functions build output
+functions/node_modules/
+functions/lib/
+admin/node_modules/
+
 # iOS related
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3

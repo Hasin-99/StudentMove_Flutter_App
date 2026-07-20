@@ -1,10 +1,23 @@
 import * as admin from "firebase-admin";
-import { onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const messaging = admin.messaging();
+
+const ADMIN_ROLES = new Set(["admin", "super_admin", "transport_admin"]);
+
+function requireAdmin(auth: { uid: string; token: Record<string, unknown> } | undefined): string {
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "Unauthenticated");
+  }
+  const role = String(auth.token.role ?? "");
+  if (!ADMIN_ROLES.has(role)) {
+    throw new HttpsError("permission-denied", "Permission denied");
+  }
+  return auth.uid;
+}
 
 async function enforceRateLimit(uid: string, key: string, seconds: number): Promise<void> {
   const ref = db.collection("rateLimits").doc(`${uid}_${key}`);
@@ -13,22 +26,15 @@ async function enforceRateLimit(uid: string, key: string, seconds: number): Prom
   if (snap.exists) {
     const last = Number(snap.data()?.lastAtMs ?? 0);
     if (last > 0 && now - last < seconds * 1000) {
-      throw new Error("Rate limit exceeded");
+      throw new HttpsError("resource-exhausted", "Rate limit exceeded");
     }
   }
   await ref.set({ lastAtMs: now }, { merge: true });
 }
 
 export const announce = onCall(async (request) => {
-  const auth = request.auth;
-  if (!auth) {
-    throw new Error("Unauthenticated");
-  }
-
-  if (auth.token.role !== "admin") {
-    throw new Error("Permission denied");
-  }
-  await enforceRateLimit(auth.uid, "announce", 10);
+  const uid = requireAdmin(request.auth);
+  await enforceRateLimit(uid, "announce", 10);
 
   const data = request.data as {
     title?: string;
@@ -41,7 +47,7 @@ export const announce = onCall(async (request) => {
   const title = (data.title ?? "").trim();
   const body = (data.body ?? "").trim();
   if (!title || !body) {
-    throw new Error("Title and body are required");
+    throw new HttpsError("invalid-argument", "Title and body are required");
   }
 
   const now = admin.firestore.FieldValue.serverTimestamp();
@@ -53,11 +59,11 @@ export const announce = onCall(async (request) => {
     isPinned: data.isPinned == true,
     publishAt: now,
     createdAt: now,
-    createdBy: auth.uid,
+    createdBy: uid,
   });
 
   await db.collection("auditEvents").add({
-    actorUid: auth.uid,
+    actorUid: uid,
     action: "announcement.create",
     targetId: ref.id,
     at: now,
@@ -78,11 +84,8 @@ export const announce = onCall(async (request) => {
 });
 
 export const upsertLiveBus = onCall(async (request) => {
-  const auth = request.auth;
-  if (!auth || auth.token.role !== "admin") {
-    throw new Error("Permission denied");
-  }
-  await enforceRateLimit(auth.uid, "upsertLiveBus", 1);
+  const uid = requireAdmin(request.auth);
+  await enforceRateLimit(uid, "upsertLiveBus", 1);
 
   const data = request.data as {
     busId?: string;
@@ -95,7 +98,7 @@ export const upsertLiveBus = onCall(async (request) => {
   const busId = (data.busId ?? "").trim();
   const busCode = (data.busCode ?? "").trim();
   if (!busId || !busCode) {
-    throw new Error("busId and busCode are required");
+    throw new HttpsError("invalid-argument", "busId and busCode are required");
   }
 
   await db.collection("liveBuses").doc(busId).set(
@@ -111,7 +114,7 @@ export const upsertLiveBus = onCall(async (request) => {
   );
 
   await db.collection("auditEvents").add({
-    actorUid: auth.uid,
+    actorUid: uid,
     action: "liveBus.upsert",
     targetId: busId,
     at: admin.firestore.FieldValue.serverTimestamp(),

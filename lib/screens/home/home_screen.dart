@@ -559,7 +559,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                sub.hasActiveSubscription ? s.planActiveTitle : s.feedbackSubmitted,
+                                sub.hasActiveSubscription ? s.planActiveTitle : s.feedbackCtaTitle,
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 16 * 0.95,
@@ -569,7 +569,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                               Text(
                                 sub.hasActiveSubscription
                                     ? s.thanksPlanActive
-                                    : s.thankYouForSharing,
+                                    : s.feedbackCtaSubtitle,
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 14,
                                   color: const Color(0xFF6B7280),

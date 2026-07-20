@@ -23,7 +23,8 @@ class ChatRepository extends ChangeNotifier {
 
     try {
       final roomId = await _resolveRoomId(email);
-      _sub ??= FirebaseFirestore.instance
+      await _sub?.cancel();
+      _sub = FirebaseFirestore.instance
           .collection('chatRooms')
           .doc(roomId)
           .collection('messages')

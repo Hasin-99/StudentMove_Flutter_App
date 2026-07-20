@@ -35,8 +35,10 @@ class AppStrings {
       _e('Search route or stop name', 'রুট বা স্টপের নাম লিখুন');
   String get bookSeat => _e('Book a seat', 'আসন বুক করুন');
   String get planActiveTitle => _e('Plan\nActive', 'প্ল্যান\nসক্রিয়');
+  String get feedbackCtaTitle => _e('Send\nfeedback', 'মতামত\nপাঠান');
   String get feedbackSubmitted => _e('Feedback\nSubmitted', 'মতামত\nজমা হয়েছে');
   String get thanksPlanActive => _e('Thanks! plan active now.', 'ধন্যবাদ! আপনার প্ল্যান এখন সক্রিয়।');
+  String get feedbackCtaSubtitle => _e('Tell us how we can improve', 'কীভাবে উন্নতি করতে পারি জানান');
   String get thankYouForSharing => _e('Thank you for sharing', 'মতামত জানানোর জন্য ধন্যবাদ');
   String get offlineMessage => _e(
         'You are offline. Cached routes load from storage; live tracking and payments need internet.',

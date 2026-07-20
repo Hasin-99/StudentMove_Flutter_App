@@ -10,6 +10,7 @@ export async function loginAction(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
+  let shouldRedirect = false;
   try {
     const email = String(formData.get("email") || "")
       .replace(/\u200B/g, "")
@@ -28,9 +29,15 @@ export async function loginAction(
     session.email = account.email;
     session.role = account.role;
     await session.save();
-    redirect("/admin");
+    shouldRedirect = true;
   } catch (error) {
     console.error("[admin-login] loginAction failed", error);
     return { error: "Sign in failed. Please try again." };
   }
+
+  // redirect() throws a special Next.js control-flow error; keep it outside try/catch.
+  if (shouldRedirect) {
+    redirect("/admin");
+  }
+  return null;
 }

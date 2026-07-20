@@ -42,4 +42,44 @@ describe('Firestore security rules', () => {
       setDoc(doc(db, 'announcements/a1'), { title: 'x', body: 'y' }),
     );
   });
+
+  it('allows user to read and write own subscription + invoices', async () => {
+    const db = testEnv.authenticatedContext('u1').firestore();
+    await assertSucceeds(
+      setDoc(doc(db, 'subscriptions/u1'), {
+        planName: 'Monthly',
+        status: 'active',
+      }),
+    );
+    await assertSucceeds(getDoc(doc(db, 'subscriptions/u1')));
+    await assertSucceeds(
+      setDoc(doc(db, 'subscriptions/u1/invoices/inv1'), {
+        planName: 'Monthly',
+        amount: 500,
+      }),
+    );
+  });
+
+  it('blocks user from writing another users subscription', async () => {
+    const db = testEnv.authenticatedContext('u1').firestore();
+    await assertFails(
+      setDoc(doc(db, 'subscriptions/u2'), { planName: 'Monthly', status: 'active' }),
+    );
+  });
+
+  it('blocks signed-in clients from creating audit events', async () => {
+    const db = testEnv.authenticatedContext('u1').firestore();
+    await assertFails(
+      setDoc(doc(db, 'auditEvents/e1'), { action: 'spoof', actorUid: 'u1' }),
+    );
+  });
+
+  it('allows admin role to write announcements', async () => {
+    const db = testEnv
+      .authenticatedContext('admin1', { role: 'super_admin' })
+      .firestore();
+    await assertSucceeds(
+      setDoc(doc(db, 'announcements/a1'), { title: 'Notice', body: 'Hello' }),
+    );
+  });
 });

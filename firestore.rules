@@ -6,11 +6,8 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.role == "admin" ||
-        request.auth.token.role == "super_admin" ||
-        request.auth.token.role == "transport_admin"
-      );
+      return isSignedIn() &&
+        request.auth.token.get('role', '') in ['admin', 'super_admin', 'transport_admin'];
     }
 
     function isOwner(uid) {
@@ -59,10 +56,23 @@ service cloud.firestore {
       }
     }
 
+    // Client subscriptions + invoices (payment gateway still stubbed in-app).
+    match /subscriptions/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /invoices/{invoiceId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create, update: if isOwner(uid) || isAdmin();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Written by Admin SDK / Cloud Functions only.
     match /auditEvents/{eventId} {
       allow read: if isAdmin();
-      allow create: if isSignedIn();
-      allow update, delete: if false;
+      allow create, update, delete: if false;
     }
   }
 }

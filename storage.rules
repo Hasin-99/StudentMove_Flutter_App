@@ -6,7 +6,8 @@ service firebase.storage {
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.token.role == "admin";
+      return isSignedIn() &&
+        request.auth.token.get('role', '') in ['admin', 'super_admin', 'transport_admin'];
     }
 
     match /chat-attachments/{uid}/{allPaths=**} {

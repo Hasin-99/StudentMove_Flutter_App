@@ -75,7 +75,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ? 52.0
             : 50.0;
     final leadingIconSize = viewportWidth >= 1200 ? 24.0 : 22.0;
-    final trailingIconSize = viewportWidth >= 1200 ? 22.0 : 20.0;
 
     return Scaffold(
       appBar: AppBar(title: Text(s.profileTitle)),

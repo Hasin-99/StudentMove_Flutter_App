@@ -11,7 +11,8 @@ const rank: Record<AdminRole, number> = {
 export async function requireRole(minRole: AdminRole) {
   const s = await getSession();
   if (!s.isAdmin) throw new Error("Unauthorized");
-  const role = (s.role ?? "super_admin") as AdminRole;
+  // Missing role must not escalate privileges.
+  const role = (s.role ?? "viewer") as AdminRole;
   if (rank[role] < rank[minRole]) throw new Error("Forbidden");
   return role;
 }
