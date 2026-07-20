@@ -16,10 +16,29 @@ class FirebaseBootstrap {
         : DefaultFirebaseOptionsDev.currentPlatform;
 
     await Firebase.initializeApp(options: options);
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-      appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
-    );
+
+    // App Check on web requires an explicit ReCaptcha provider; without it
+    // FlutterFire throws ArgumentError and crashes the web bootstrap path.
+    // Skip web App Check unless a site key is provided via dart-define.
+    const webRecaptchaSiteKey = String.fromEnvironment('APP_CHECK_RECAPTCHA_SITE_KEY');
+    try {
+      if (kIsWeb) {
+        if (webRecaptchaSiteKey.isNotEmpty) {
+          await FirebaseAppCheck.instance.activate(
+            webProvider: ReCaptchaV3Provider(webRecaptchaSiteKey),
+          );
+        }
+      } else {
+        await FirebaseAppCheck.instance.activate(
+          androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+          appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Firebase App Check activate skipped: $e');
+      }
+    }
 
     // macOS debug can hit stale local Firestore/CoreData store incompatibilities.
     // Disable local persistence in debug to avoid startup hangs/crashes.
