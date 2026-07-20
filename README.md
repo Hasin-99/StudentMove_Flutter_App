@@ -59,7 +59,4 @@ StudentMove — Smart Transport Solution · **Daffodil International University*
 |--------|-----|
 | Md. Shadman Hasin | 0242220005101462 |
 | Md. Shadman Tahsin | 0242220005101461 |
-| Md. Julfikar Hasan | 0242220005101495 |
-| Nahid Hasan | 0242220005101460 |
-| KM Najimuddin | 0242220005101493 |
 
