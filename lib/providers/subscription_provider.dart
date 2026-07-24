@@ -148,7 +148,8 @@ class SubscriptionProvider extends ChangeNotifier {
     }, onError: (_) {});
   }
 
-  /// Call when user completes plan selection (stub until payment API exists).
+  /// Activates a plan after demo checkout (bKash/Nagad/Rocket or card).
+  /// Hosted SSLCommerz lives on the web app; Flutter keeps local+Firestore activation.
   Future<void> activatePlan(
     String plan,
     Duration duration, {

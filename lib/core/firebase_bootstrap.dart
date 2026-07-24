@@ -11,32 +11,36 @@ import 'firebase_environment.dart';
 
 class FirebaseBootstrap {
   static Future<void> initialize() async {
-    final options = FirebaseEnvironment.flavor == 'prod'
-        ? DefaultFirebaseOptionsProd.currentPlatform
-        : DefaultFirebaseOptionsDev.currentPlatform;
+    try {
+      final options = FirebaseEnvironment.flavor == 'prod'
+          ? DefaultFirebaseOptionsProd.currentPlatform
+          : DefaultFirebaseOptionsDev.currentPlatform;
 
-    await Firebase.initializeApp(options: options);
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-      appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
-    );
+      await Firebase.initializeApp(options: options);
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+      );
 
-    // macOS debug can hit stale local Firestore/CoreData store incompatibilities.
-    // Disable local persistence in debug to avoid startup hangs/crashes.
-    if (!kIsWeb && kDebugMode && defaultTargetPlatform == TargetPlatform.macOS) {
-      try {
-        // Clear any stale persisted cache from previous runs/configs.
-        await FirebaseFirestore.instance.clearPersistence();
-      } catch (_) {
-        // Ignore if Firestore was already initialized in this process.
+      // macOS debug can hit stale local Firestore/CoreData store incompatibilities.
+      // Disable local persistence in debug to avoid startup hangs/crashes.
+      if (!kIsWeb && kDebugMode && defaultTargetPlatform == TargetPlatform.macOS) {
+        try {
+          await FirebaseFirestore.instance.clearPersistence();
+        } catch (e) {
+          debugPrint('Firestore clearPersistence skipped: $e');
+        }
+        FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: false);
       }
-      FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: false);
-    }
 
-    if (FirebaseEnvironment.useEmulator) {
-      await FirebaseAuth.instance.useAuthEmulator('127.0.0.1', 9099);
-      FirebaseFirestore.instance.useFirestoreEmulator('127.0.0.1', 8080);
-      FirebaseFunctions.instance.useFunctionsEmulator('127.0.0.1', 5001);
+      if (FirebaseEnvironment.useEmulator) {
+        await FirebaseAuth.instance.useAuthEmulator('127.0.0.1', 9099);
+        FirebaseFirestore.instance.useFirestoreEmulator('127.0.0.1', 8080);
+        FirebaseFunctions.instance.useFunctionsEmulator('127.0.0.1', 5001);
+      }
+    } catch (e, st) {
+      debugPrint('FirebaseBootstrap.initialize failed: $e\n$st');
+      rethrow;
     }
   }
 }

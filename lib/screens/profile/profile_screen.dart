@@ -16,6 +16,7 @@ import '../../widgets/feedback_sheet.dart';
 import '../booking/booking_screen.dart';
 import '../chat/chat_screen.dart';
 import '../driver/driver_companion_screen.dart';
+import '../notifications/notification_settings_screen.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -75,7 +76,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ? 52.0
             : 50.0;
     final leadingIconSize = viewportWidth >= 1200 ? 24.0 : 22.0;
-    final trailingIconSize = viewportWidth >= 1200 ? 22.0 : 20.0;
 
     return Scaffold(
       appBar: AppBar(title: Text(s.profileTitle)),
@@ -97,11 +97,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             decoration: BoxDecoration(
               color: AppColors.brand,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x1F3B82F6),
+                  color: AppColors.brand.withValues(alpha: 0.22),
                   blurRadius: 14,
-                  offset: Offset(0, 8),
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -124,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ? null
                           : Text(
                               (auth.userName?.isNotEmpty ?? false) ? auth.userName![0].toUpperCase() : 'U',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: GoogleFonts.ibmPlexSans(
                                 fontSize: viewportWidth >= 1200 ? 30 : 28,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
@@ -134,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 12),
                     Text(
                       auth.userName ?? '—',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.ibmPlexSans(
                         fontSize: profileNameSize,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
@@ -146,7 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.ibmPlexSans(
                         fontSize: profileEmailSize,
                         color: Colors.white.withValues(alpha: 0.9),
                       ),
@@ -288,7 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     leading: Icon(Icons.route_rounded, color: AppColors.muted, size: leadingIconSize),
                     title: Text(
                       s.isBangla ? 'কোনো রুট সংরক্ষিত নেই' : 'No saved routes',
-                      style: GoogleFonts.plusJakartaSans(color: AppColors.muted),
+                      style: GoogleFonts.ibmPlexSans(color: AppColors.muted),
                     ),
                   )
                 else
@@ -329,6 +329,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 spacing: spacing,
                 runSpacing: 0,
                 children: [
+                  SizedBox(
+                    width: tileWidth,
+                    child: _tile(
+                      Icons.notifications_active_outlined,
+                      s.isBangla ? 'অ্যালার্ট সেটিংস' : 'Alert settings',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const NotificationSettingsScreen(),
+                        ),
+                      ),
+                    ),
+                  ),
                   SizedBox(
                     width: tileWidth,
                     child: _tile(
@@ -458,7 +471,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.only(bottom: 8, left: 4),
       child: Text(
         t.toUpperCase(),
-        style: GoogleFonts.plusJakartaSans(
+        style: GoogleFonts.ibmPlexSans(
           fontSize: 11,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.05,
@@ -486,7 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         highlightColor: AppColors.brandLight.withValues(alpha: 0.1),
         child: ListTile(
           leading: Icon(icon, color: AppColors.brand, size: leadingIconSize),
-          title: Text(title, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+          title: Text(title, style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w600)),
           trailing: Icon(Icons.chevron_right_rounded, color: AppColors.muted, size: trailingIconSize),
         ),
       ),

@@ -9,8 +9,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../../data/schedule_data.dart';
+import '../../data/live_bus_data.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/schedule_repository.dart';
+import '../../services/live_bus_repository.dart';
 import '../../theme/app_theme.dart';
 
 /// Day tabs, route, university search, per-slot bus/time/origin + mini route + PDF.
@@ -22,8 +24,8 @@ class NextBusArrivalScreen extends StatefulWidget {
 }
 
 class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
-  static const _accentBlue = Color(0xFF1A23D1);
-  static const _pageBg = Color(0xFFF2F3F8);
+  static const _accentBlue = AppColors.brand;
+  static const _pageBg = Color(0xFFEDF2F1);
 
   final _searchController = TextEditingController();
 
@@ -35,6 +37,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await context.read<ScheduleRepository>().refresh();
+      context.read<LiveBusRepository>().startPolling();
       if (!mounted) return;
       final routes = context.read<ScheduleRepository>().routeNames;
       if (routes.isNotEmpty && !routes.contains(_route)) {
@@ -46,6 +49,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    // Keep live polling for other screens; do not stop globally.
     super.dispose();
   }
 
@@ -158,6 +162,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final repo = context.watch<ScheduleRepository>();
+    final liveBuses = context.watch<LiveBusRepository>().buses;
     final routes = repo.routeNames;
     final activeRoute = routes.contains(_route) ? _route : routes.first;
     final slots = _visible(repo);
@@ -166,6 +171,13 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
         (auth.profileImagePath?.isNotEmpty ?? false) &&
         File(auth.profileImagePath!).existsSync();
 
+    LiveBus? matchLive(ScheduleSlot slot) {
+      final code = slot.busCode.trim().toLowerCase();
+      for (final b in liveBuses) {
+        if (b.busCode.trim().toLowerCase() == code) return b;
+      }
+      return null;
+    }
     return Scaffold(
       backgroundColor: _pageBg,
       floatingActionButton: Material(
@@ -190,7 +202,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
                 const SizedBox(width: 8),
                 Text(
                   'Download PDF',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
@@ -221,7 +233,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
                       onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         hintText: 'Enter your University name',
-                        hintStyle: GoogleFonts.plusJakartaSans(
+                        hintStyle: GoogleFonts.ibmPlexSans(
                           fontSize: 14,
                           color: AppColors.muted,
                         ),
@@ -247,7 +259,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
                         ? null
                         : Text(
                             name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                            style: GoogleFonts.plusJakartaSans(
+                            style: GoogleFonts.ibmPlexSans(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
                             ),
@@ -277,7 +289,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
                           repo.fromApi
                               ? 'Schedules from server'
                               : 'Sample schedules (publish schedules collection in Firestore)',
-                          style: GoogleFonts.plusJakartaSans(
+                          style: GoogleFonts.ibmPlexSans(
                             fontSize: 12,
                             color: AppColors.muted,
                             fontWeight: FontWeight.w600,
@@ -293,7 +305,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
               child: DropdownButtonFormField<String>(
                 key: ValueKey<String>('${activeRoute}_${routes.join('|')}'),
-                initialValue: activeRoute,
+                value: activeRoute,
                 decoration: InputDecoration(
                   labelText: 'Route',
                   filled: true,
@@ -329,7 +341,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
                               slots.length == 1
                                   ? 'One schedule available'
                                   : '${slots.length} schedules available',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: GoogleFonts.ibmPlexSans(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 15,
                                 color: AppColors.ink,
@@ -346,7 +358,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
                                 child: Text(
                                   'No buses for ${ScheduleSlot.dayShortLabels[_dayIndex]} on this route.\nTry another day or clear the university search.',
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.plusJakartaSans(
+                                  style: GoogleFonts.ibmPlexSans(
                                     color: AppColors.muted,
                                     height: 1.45,
                                   ),
@@ -368,6 +380,7 @@ class _NextBusArrivalScreenState extends State<NextBusArrivalScreen> {
                                 (context, i) => _ScheduleCard(
                                   slot: slots[i],
                                   accent: _accentBlue,
+                                  liveBus: matchLive(slots[i]),
                                 ),
                                 childCount: slots.length,
                               ),
@@ -418,7 +431,7 @@ class _DayTabBar extends StatelessWidget {
                 children: [
                   Text(
                     ScheduleSlot.dayShortLabels[i],
-                    style: GoogleFonts.plusJakartaSans(
+                    style: GoogleFonts.ibmPlexSans(
                       fontWeight: sel ? FontWeight.w800 : FontWeight.w600,
                       fontSize: 13,
                       color: sel ? accent : AppColors.muted,
@@ -445,52 +458,103 @@ class _DayTabBar extends StatelessWidget {
 }
 
 class _ScheduleCard extends StatelessWidget {
-  const _ScheduleCard({required this.slot, required this.accent});
+  const _ScheduleCard({
+    required this.slot,
+    required this.accent,
+    this.liveBus,
+  });
 
   final ScheduleSlot slot;
   final Color accent;
+  final LiveBus? liveBus;
 
   @override
   Widget build(BuildContext context) {
+    final gps = liveBus?.gpsFreshness;
+    final gpsColor = switch (gps) {
+      GpsFreshness.live => AppColors.brand,
+      GpsFreshness.stale => AppColors.accent,
+      GpsFreshness.waiting => AppColors.muted,
+      GpsFreshness.offline => AppColors.danger,
+      null => AppColors.muted,
+    };
+    final gpsText = liveBus?.gpsLabel ?? 'Waiting for GPS';
+    final eta = liveBus?.etaText;
+    final delayed = (liveBus?.delayMinutes ?? 0) >= 3;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accent.withValues(alpha: 0.55), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: accent.withValues(alpha: 0.45), width: 1.5),
+        boxShadow: AppTheme.elev1,
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${slot.timeLabel}, ${slot.dateLabel}',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: accent,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${slot.timeLabel}, ${slot.dateLabel}',
+                    style: GoogleFonts.syne(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: accent,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: gpsColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.circle, size: 8, color: gpsColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        gpsText,
+                        style: GoogleFonts.ibmPlexSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: gpsColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
               'Bus: ${slot.busCode}',
-              style: GoogleFonts.plusJakartaSans(
+              style: GoogleFonts.ibmPlexSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: AppColors.ink,
               ),
             ),
+            if (liveBus != null && liveBus!.speedKmph > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${liveBus!.heading.toStringAsFixed(0)}° · ${liveBus!.speedKmph.toStringAsFixed(0)} km/h'
+                '${eta != null ? ' · $eta' : ''}',
+                style: GoogleFonts.ibmPlexSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: delayed ? AppColors.danger : AppColors.muted,
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
             Text(
               'from: ${slot.origin}',
-              style: GoogleFonts.plusJakartaSans(
+              style: GoogleFonts.ibmPlexSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: accent,
@@ -500,7 +564,7 @@ class _ScheduleCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 slot.whiteboardNote,
-                style: GoogleFonts.plusJakartaSans(
+                style: GoogleFonts.ibmPlexSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.muted,
@@ -532,21 +596,36 @@ class _MiniRoutePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bg = Paint()..color = const Color(0xFFE8EAF6);
+    final bg = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppColors.paper,
+          AppColors.brandLight.withValues(alpha: 0.18),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     final r = RRect.fromRectAndRadius(
       Rect.fromLTWH(0, 0, size.width, size.height),
       const Radius.circular(4),
     );
     canvas.drawRRect(r, bg);
 
+    // Soft 3D road shadow.
+    final shadow = Paint()
+      ..color = AppColors.ink.withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
     final path = Path()
-      ..moveTo(size.width * 0.12, size.height * 0.55)
+      ..moveTo(size.width * 0.12, size.height * 0.58)
       ..quadraticBezierTo(
         size.width * 0.45,
-        size.height * 0.15,
+        size.height * 0.18,
         size.width * 0.88,
-        size.height * 0.48,
+        size.height * 0.50,
       );
+    canvas.drawPath(path, shadow);
 
     final line = Paint()
       ..color = accent
@@ -556,9 +635,18 @@ class _MiniRoutePainter extends CustomPainter {
 
     canvas.drawPath(path, line);
 
-    final dot = Paint()..color = accent;
-    canvas.drawCircle(Offset(size.width * 0.12, size.height * 0.55), 5, dot);
-    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.48), 5, dot);
+    final bus = Paint()..color = accent;
+    final busRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.52, size.height * 0.34),
+        width: 22,
+        height: 12,
+      ),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(busRect, bus);
+    canvas.drawCircle(Offset(size.width * 0.12, size.height * 0.58), 5, bus);
+    canvas.drawCircle(Offset(size.width * 0.88, size.height * 0.50), 5, bus);
   }
 
   @override

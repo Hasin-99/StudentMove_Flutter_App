@@ -9,6 +9,7 @@ import '../../providers/saved_routes_provider.dart';
 import '../../services/announcement_repository.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/quick_actions_dock.dart';
+import 'notification_settings_screen.dart';
 
 /// Push inbox — build reference §4.4 (list from GET /notifications when live).
 class NotificationsScreen extends StatefulWidget {
@@ -34,7 +35,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return AlertDialog(
           title: Text(
             title,
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.ibmPlexSans(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: AppColors.ink,
@@ -49,7 +50,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 children: [
                   Text(
                     body,
-                    style: GoogleFonts.plusJakartaSans(
+                    style: GoogleFonts.ibmPlexSans(
                       fontSize: 14,
                       height: 1.4,
                       color: AppColors.muted,
@@ -58,7 +59,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   const SizedBox(height: 10),
                   Text(
                     time,
-                    style: GoogleFonts.plusJakartaSans(
+                    style: GoogleFonts.ibmPlexSans(
                       fontSize: 12,
                       color: AppColors.muted.withValues(alpha: 0.85),
                     ),
@@ -117,6 +118,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: Text(widget.strings.isBangla ? 'নোটিফিকেশন' : 'Notifications'),
         actions: [
           IconButton(
+            tooltip: widget.strings.isBangla ? 'সেটিংস' : 'Settings',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const NotificationSettingsScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.settings_outlined),
+          ),
+          IconButton(
             onPressed: () => Navigator.maybePop(context),
             icon: const Icon(Icons.close_rounded),
           ),
@@ -139,7 +152,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Expanded(
                     child: Text(
                       widget.strings.isBangla ? 'লাইভ ইনবক্স' : 'Live Inbox',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.ibmPlexSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppColors.ink,
@@ -190,7 +203,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 children: [
                                   Text(
                                     n.title,
-                                    style: GoogleFonts.plusJakartaSans(
+                                    style: GoogleFonts.ibmPlexSans(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w800,
                                       color: AppColors.ink,
@@ -199,7 +212,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     n.body,
-                                    style: GoogleFonts.plusJakartaSans(
+                                    style: GoogleFonts.ibmPlexSans(
                                       fontSize: 14,
                                       color: AppColors.muted,
                                     ),
@@ -207,7 +220,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     DateFormat('HH:mm').format(n.receivedAt),
-                                    style: GoogleFonts.plusJakartaSans(
+                                    style: GoogleFonts.ibmPlexSans(
                                       fontSize: 12,
                                       color: AppColors.muted.withValues(alpha: 0.85),
                                     ),
@@ -295,7 +308,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 children: [
                                   Text(
                                     a.title,
-                                    style: GoogleFonts.plusJakartaSans(
+                                    style: GoogleFonts.ibmPlexSans(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w800,
                                       color: AppColors.ink,
@@ -306,7 +319,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     a.body,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.plusJakartaSans(
+                                    style: GoogleFonts.ibmPlexSans(
                                       fontSize: 14,
                                       color: AppColors.muted,
                                     ),
@@ -314,7 +327,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     DateFormat('m min').format(a.publishAt.toLocal()),
-                                    style: GoogleFonts.plusJakartaSans(
+                                    style: GoogleFonts.ibmPlexSans(
                                       fontSize: 12,
                                       color: AppColors.muted.withValues(alpha: 0.85),
                                     ),
@@ -323,7 +336,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(Icons.circle, color: Color(0xFF3B82F6), size: 8),
+                            const Icon(Icons.circle, color: AppColors.brand, size: 8),
                             const SizedBox(width: 10),
                             const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
                           ],
@@ -400,7 +413,7 @@ class _StaticNotificationTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.ink,
@@ -409,18 +422,18 @@ class _StaticNotificationTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   body,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppColors.muted),
+                  style: GoogleFonts.ibmPlexSans(fontSize: 14, color: AppColors.muted),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   time,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
+                  style: GoogleFonts.ibmPlexSans(fontSize: 12, color: AppColors.muted),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          const Icon(Icons.circle, color: Color(0xFF3B82F6), size: 8),
+          const Icon(Icons.circle, color: AppColors.brand, size: 8),
           const SizedBox(width: 10),
           const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
         ],

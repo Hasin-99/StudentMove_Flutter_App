@@ -252,7 +252,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 8),
               Text(
             'Email is managed by your account. Contact support to change it.',
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.ibmPlexSans(
               fontSize: 12,
               color: const Color(0xFF6B7280),
             ),
@@ -295,7 +295,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Text(
               label,
-              style: GoogleFonts.plusJakartaSans(
+              style: GoogleFonts.ibmPlexSans(
                 color: const Color(0xFF6B7280),
                 fontWeight: FontWeight.w600,
                 fontSize: 14,

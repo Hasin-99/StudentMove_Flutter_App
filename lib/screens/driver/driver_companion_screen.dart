@@ -10,7 +10,7 @@ import '../../l10n/app_strings.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_theme.dart';
 
-/// GPS broadcast companion for driver-side live location workflow.
+/// Driver GPS companion — dark phone-first UI matching StudentMove web driver panel.
 class DriverCompanionScreen extends StatefulWidget {
   const DriverCompanionScreen({super.key});
 
@@ -25,6 +25,7 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
   Position? _lastPosition;
   StreamSubscription<Position>? _positionSub;
   String _manualPointKey = 'dsc_gate';
+  String _tripStatus = 'on_time';
 
   static const Map<String, ({String label, double lat, double lng})> _manualPoints = {
     'dsc_gate': (label: 'DIU/DSC Gate', lat: 23.8103, lng: 90.4125),
@@ -61,7 +62,8 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         setState(() => _status = 'Location permission is denied.');
         return false;
       }
@@ -69,6 +71,51 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
     } catch (e) {
       setState(() => _status = 'Location permission setup error: $e');
       return false;
+    }
+  }
+
+  Future<void> _publish({
+    required double lat,
+    required double lng,
+    required double heading,
+    required double speedKmph,
+    required String source,
+  }) async {
+    await FirebaseFirestore.instance.collection('liveBuses').doc(_docId).set({
+      'busCode': _busCode(),
+      'lat': lat,
+      'lng': lng,
+      'heading': heading,
+      'speedKmph': speedKmph,
+      'source': source,
+      'status': _tripStatus,
+      'delayMinutes': _tripStatus == 'delayed' ? 5 : 0,
+      'routeName': 'Campus shuttle',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> _setTripStatus(String status) async {
+    setState(() => _tripStatus = status);
+    final pos = _lastPosition;
+    if (pos != null) {
+      try {
+        await _publish(
+          lat: pos.latitude,
+          lng: pos.longitude,
+          heading: pos.heading.isNaN ? 0.0 : pos.heading,
+          speedKmph: (pos.speed * 3.6).clamp(0, 180),
+          source: 'gps',
+        );
+      } catch (_) {}
+    } else {
+      try {
+        await FirebaseFirestore.instance.collection('liveBuses').doc(_docId).set({
+          'status': status,
+          'delayMinutes': status == 'delayed' ? 5 : 0,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (_) {}
     }
   }
 
@@ -95,17 +142,15 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
     ).listen((pos) async {
       _lastPosition = pos;
       try {
-        await FirebaseFirestore.instance.collection('liveBuses').doc(_docId).set({
-          'busCode': _busCode(),
-          'lat': pos.latitude,
-          'lng': pos.longitude,
-          'heading': pos.heading.isNaN ? 0.0 : pos.heading,
-          'speedKmph': (pos.speed * 3.6).clamp(0, 180),
-          'source': 'gps',
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        await _publish(
+          lat: pos.latitude,
+          lng: pos.longitude,
+          heading: pos.heading.isNaN ? 0.0 : pos.heading,
+          speedKmph: (pos.speed * 3.6).clamp(0, 180),
+          source: 'gps',
+        );
         if (mounted) {
-          setState(() => _status = 'Broadcasting live location.');
+          setState(() => _status = 'Live · sending to students');
         }
       } catch (e) {
         if (mounted) setState(() => _status = 'Failed to sync: $e');
@@ -118,7 +163,7 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
     setState(() {
       _broadcasting = true;
       _requesting = false;
-      _status = 'Broadcasting live location.';
+      _status = 'Live · sending to students';
     });
   }
 
@@ -128,7 +173,7 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
     if (!mounted) return;
     setState(() {
       _broadcasting = false;
-      _status = 'Broadcast stopped.';
+      _status = 'Shift ended';
     });
   }
 
@@ -136,15 +181,13 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
     final p = _manualPoints[_manualPointKey];
     if (p == null) return;
     try {
-      await FirebaseFirestore.instance.collection('liveBuses').doc(_docId).set({
-        'busCode': _busCode(),
-        'lat': p.lat,
-        'lng': p.lng,
-        'heading': 0.0,
-        'speedKmph': 0.0,
-        'source': 'manual',
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _publish(
+        lat: p.lat,
+        lng: p.lng,
+        heading: 0,
+        speedKmph: 0,
+        source: 'manual',
+      );
       if (!mounted) return;
       setState(() => _status = 'Manual location sent: ${p.label}');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -153,9 +196,6 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _status = 'Manual location failed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Manual location failed: $e')),
-      );
     }
   }
 
@@ -163,86 +203,98 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
   Widget build(BuildContext context) {
     final loc = context.watch<LocaleProvider>();
     final s = AppStrings(loc.locale);
+    final gpsState = _requesting
+        ? 'Requesting GPS…'
+        : _broadcasting
+            ? 'GPS live'
+            : (_lastPosition == null ? 'GPS idle' : 'GPS paused');
 
     return Scaffold(
+      backgroundColor: AppColors.graphite,
       appBar: AppBar(
-        title: Text(s.driverTitle),
+        backgroundColor: AppColors.ink,
+        title: Text(
+          s.driverTitle,
+          style: GoogleFonts.syne(fontWeight: FontWeight.w700),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF262F3A),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _busCode(),
+                  style: GoogleFonts.syne(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  'Campus shuttle · $gpsState',
+                  style: GoogleFonts.ibmPlexSans(color: Colors.white70),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _StatusBtn(
+                      label: s.isBangla ? 'অন টাইম' : 'On time',
+                      selected: _tripStatus == 'on_time',
+                      color: AppColors.brandLight,
+                      onTap: () => _setTripStatus('on_time'),
+                    ),
+                    _StatusBtn(
+                      label: s.isBangla ? 'ডিলে' : 'Report delay',
+                      selected: _tripStatus == 'delayed',
+                      color: AppColors.accent,
+                      onTap: () => _setTripStatus('delayed'),
+                    ),
+                    _StatusBtn(
+                      label: s.isBangla ? 'স্টপড' : 'Bus stopped',
+                      selected: _tripStatus == 'stopped',
+                      color: AppColors.danger,
+                      onTap: () => _setTripStatus('stopped'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                if (_status != null)
                   Text(
-                    s.tripStatus,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                    _status!,
+                    style: GoogleFonts.ibmPlexSans(
+                      color: AppColors.accentHot,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
+                if (_lastPosition != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    _broadcasting
-                        ? (s.isBangla ? 'চলছে — লোকেশন প্রতি ১০ সেকেন্ডে পাঠানো হবে' : 'En route — location every 10s to backend')
-                        : (s.isBangla ? 'অপেক্ষমান' : 'Idle'),
-                    style: GoogleFonts.plusJakartaSans(
-                      color: AppColors.muted,
-                      height: 1.4,
+                    'Lat ${_lastPosition!.latitude.toStringAsFixed(5)}  ·  '
+                    'Lng ${_lastPosition!.longitude.toStringAsFixed(5)}\n'
+                    'Accuracy ±${_lastPosition!.accuracy.toStringAsFixed(0)} m  ·  '
+                    '${(_lastPosition!.speed * 3.6).clamp(0, 180).toStringAsFixed(0)} km/h',
+                    style: GoogleFonts.ibmPlexSans(
+                      color: Colors.white60,
+                      fontSize: 12,
+                      height: 1.45,
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  if (_status != null) ...[
-                    Text(
-                      _status!,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: AppColors.muted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  if (_lastPosition != null) ...[
-                    Text(
-                      'Lat: ${_lastPosition!.latitude.toStringAsFixed(6)} | '
-                      'Lng: ${_lastPosition!.longitude.toStringAsFixed(6)}',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.battery_charging_full_rounded,
-                        color: AppColors.brand,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        s.isBangla ? 'ব্যাটারি: ডিভাইস রিপোর্ট' : 'Battery: from device',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.signal_cellular_alt_rounded, color: AppColors.brand),
-                      const SizedBox(width: 8),
-                      Text(
-                        s.isBangla ? 'সংযোগ: নেটওয়ার্ক স্ট্যাটাস' : 'Connection: network status',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 14),
-                      ),
-                    ],
                   ),
                 ],
-              ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: _requesting
                 ? null
@@ -254,17 +306,38 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
                     }
                   },
             icon: Icon(_broadcasting ? Icons.stop_rounded : Icons.play_arrow_rounded),
-            label: Text(_requesting ? 'Starting...' : (_broadcasting ? s.stopTrip : s.startTrip)),
+            label: Text(
+              _requesting
+                  ? 'Starting…'
+                  : (_broadcasting
+                      ? (s.isBangla ? 'শিফট শেষ' : 'End shift')
+                      : (s.isBangla ? 'শিফট শুরু' : 'Start shift')),
+            ),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: _broadcasting ? const Color(0xFFDC2626) : AppColors.brand,
+              backgroundColor:
+                  _broadcasting ? AppColors.danger : AppColors.accent,
+              foregroundColor: Colors.white,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
+          Text(
+            s.isBangla ? 'ম্যানুয়াল / ডেমো GPS' : 'Manual / demo GPS',
+            style: GoogleFonts.ibmPlexSans(
+              color: Colors.white70,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: _manualPointKey,
+            value: _manualPointKey,
+            dropdownColor: const Color(0xFF262F3A),
+            style: GoogleFonts.ibmPlexSans(color: Colors.white),
             decoration: InputDecoration(
-              labelText: s.isBangla ? 'ম্যানুয়াল লোকেশন' : 'Manual location point',
+              filled: true,
+              fillColor: const Color(0xFF262F3A),
+              labelText: s.isBangla ? 'লোকেশন পয়েন্ট' : 'Location point',
+              labelStyle: const TextStyle(color: Colors.white70),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: _manualPoints.entries
@@ -283,8 +356,14 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
           const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: _requesting ? null : _sendManualLocation,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white24),
+            ),
             icon: const Icon(Icons.place_rounded),
-            label: Text(s.isBangla ? 'ম্যানুয়াল লোকেশন পাঠান' : 'Send manual location'),
+            label: Text(
+              s.isBangla ? 'ম্যানুয়াল লোকেশন পাঠান' : 'Send manual location',
+            ),
           ),
         ],
       ),
@@ -295,5 +374,42 @@ class _DriverCompanionScreenState extends State<DriverCompanionScreen> {
   void dispose() {
     _positionSub?.cancel();
     super.dispose();
+  }
+}
+
+class _StatusBtn extends StatelessWidget {
+  const _StatusBtn({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? color : color.withValues(alpha: 0.18),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Text(
+            label,
+            style: GoogleFonts.ibmPlexSans(
+              color: selected ? Colors.white : color,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

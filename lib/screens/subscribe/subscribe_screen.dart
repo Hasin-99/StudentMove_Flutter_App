@@ -29,9 +29,29 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
   final ScrollController _scrollController = ScrollController();
 
   static const _plans = [
-    _PlanDef('Basic', 1200, '/month', Duration(days: 30), rides: '20 rides per month'),
-    _PlanDef('Standard', 1800, '/month', Duration(days: 30), rides: '40 rides per month'),
-    _PlanDef('Yearly', 12000, '/year', Duration(days: 365), rides: 'Unlimited bus rides'),
+    _PlanDef(
+      'Weekly Pass',
+      350,
+      '/week',
+      Duration(days: 7),
+      rides: 'Unlimited rides for 7 days',
+      tag: 'Most Popular',
+    ),
+    _PlanDef(
+      'Monthly Pass',
+      1200,
+      '/month',
+      Duration(days: 30),
+      rides: 'Best for regular commuters',
+      tag: 'Best Value',
+    ),
+    _PlanDef(
+      'Single Ride',
+      30,
+      '/ride',
+      Duration(days: 1),
+      rides: 'Pay as you go',
+    ),
   ];
 
   Future<void> _jumpToInvoiceHistory() async {
@@ -119,7 +139,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
                             children: [
                               Text(
                                 '${sub.planName} · ${sub.daysRemaining} ${s.daysLeft}',
-                                style: GoogleFonts.plusJakartaSans(
+                                style: GoogleFonts.ibmPlexSans(
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
@@ -127,7 +147,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
                                 s.isBangla
                                     ? 'সাবস্ক্রিপশন সক্রিয়'
                                     : 'Subscription active',
-                                style: GoogleFonts.plusJakartaSans(
+                                style: GoogleFonts.ibmPlexSans(
                                   fontSize: 13,
                                   color: AppColors.muted,
                                 ),
@@ -193,7 +213,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
           if (sub.hasActiveSubscription) const SizedBox(height: 16),
           Text(
             s.isBangla ? 'সাবস্ক্রিপশন প্ল্যান' : 'Subscription Plans',
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.ibmPlexSans(
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
@@ -203,7 +223,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             s.isBangla
                 ? 'আপনার দৈনন্দিন যাত্রার জন্য সেরা প্ল্যান বেছে নিন'
                 : 'Choose the best plan for your daily commute',
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.ibmPlexSans(
               fontSize: 14,
               height: 1.45,
               color: AppColors.muted,
@@ -226,7 +246,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
                         child: _PlanTile(
                           plan: p,
                           strings: s,
-                          highlight: _vehicle == 'bus' && p.name == 'Basic',
+                          highlight: p.name == 'Weekly Pass',
                           onSelect: () async {
                             final subProvider = context.read<SubscriptionProvider>();
                             final details = await Navigator.push<_SubscriptionSelection>(
@@ -282,63 +302,131 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
           const SizedBox(height: 28),
           Text(
             key: _invoiceHeaderKey,
-            s.isBangla ? 'ইনভয়েস হিস্ট্রি' : 'Invoice history',
-            style: GoogleFonts.plusJakartaSans(
+            s.isBangla ? 'হিস্ট্রি' : 'History',
+            style: GoogleFonts.syne(
               fontWeight: FontWeight.w800,
-              fontSize: 16,
+              fontSize: 18,
             ),
           ),
-          const SizedBox(height: 12),
-          if (sub.invoices.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    const Icon(Icons.receipt_long_outlined, color: AppColors.muted, size: 32),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        s.noInvoices,
-                        style: GoogleFonts.plusJakartaSans(
-                          color: AppColors.muted,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
+          const SizedBox(height: 8),
+          DefaultTabController(
+            length: 2,
+            child: Column(
+              children: [
+                TabBar(
+                  labelColor: AppColors.brand,
+                  unselectedLabelColor: AppColors.muted,
+                  indicatorColor: AppColors.accent,
+                  labelStyle: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w700),
+                  tabs: [
+                    Tab(text: s.isBangla ? 'সাবস্ক্রিপশন' : 'Subscriptions'),
+                    Tab(text: s.isBangla ? 'ইনভয়েস' : 'Invoices'),
                   ],
                 ),
-              ),
-            )
-          else
-            ...sub.invoices.map(
-              (inv) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.receipt_long_rounded, color: AppColors.brand),
-                  title: Text(
-                    inv.planName,
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    'Amount: ৳${NumberFormat('#,##0').format(inv.amount)} · ${inv.paymentMethod}\n'
-                    'Paid: ${DateFormat('dd MMM yyyy, hh:mm a').format(inv.paidAt)}\n'
-                    'Valid until: ${DateFormat('dd MMM yyyy').format(inv.validUntil)}',
-                  ),
-                  trailing: Wrap(
-                    spacing: 2,
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 280,
+                  child: TabBarView(
                     children: [
-                      IconButton(
-                        tooltip: s.isBangla ? 'ডাউনলোড PDF' : 'Download PDF',
-                        onPressed: () => _downloadInvoicePdf(context, inv, s),
-                        icon: const Icon(Icons.download_rounded, color: AppColors.brand),
+                      ListView(
+                        children: [
+                          if (!sub.hasActiveSubscription && sub.invoices.isEmpty)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Text(
+                                  s.isBangla
+                                      ? 'এখনো কোনো পাস নেই — উপরে একটি প্ল্যান বেছে নিন।'
+                                      : 'No passes yet — choose a plan above.',
+                                  style: GoogleFonts.ibmPlexSans(color: AppColors.muted),
+                                ),
+                              ),
+                            )
+                          else ...[
+                            if (sub.hasActiveSubscription)
+                              Card(
+                                color: AppColors.brandLight.withValues(alpha: 0.12),
+                                child: ListTile(
+                                  leading: const Icon(Icons.verified_rounded, color: AppColors.brand),
+                                  title: Text(
+                                    sub.planName ?? 'Active pass',
+                                    style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w800),
+                                  ),
+                                  subtitle: Text(
+                                    s.isBangla
+                                        ? 'সক্রিয় · ${sub.daysRemaining} দিন বাকি'
+                                        : 'Active · ${sub.daysRemaining} days left',
+                                  ),
+                                ),
+                              ),
+                            ...sub.invoices.map(
+                              (inv) => Card(
+                                child: ListTile(
+                                  title: Text(inv.planName),
+                                  subtitle: Text(
+                                    'Valid until ${DateFormat('dd MMM yyyy').format(inv.validUntil)}',
+                                  ),
+                                  trailing: Text('৳${NumberFormat('#,##0').format(inv.amount)}'),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+                      ListView(
+                        children: [
+                          if (sub.invoices.isEmpty)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.receipt_long_outlined, color: AppColors.muted, size: 32),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Text(
+                                        s.noInvoices,
+                                        style: GoogleFonts.ibmPlexSans(
+                                          color: AppColors.muted,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            ...sub.invoices.map(
+                              (inv) => Card(
+                                child: ListTile(
+                                  leading: const Icon(Icons.receipt_long_rounded, color: AppColors.brand),
+                                  title: Text(
+                                    inv.planName,
+                                    style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w700),
+                                  ),
+                                  subtitle: Text(
+                                    'Amount: ৳${NumberFormat('#,##0').format(inv.amount)} · ${inv.paymentMethod}\n'
+                                    'Paid: ${DateFormat('dd MMM yyyy, hh:mm a').format(inv.paidAt)}\n'
+                                    'Valid until: ${DateFormat('dd MMM yyyy').format(inv.validUntil)}',
+                                  ),
+                                  trailing: IconButton(
+                                    tooltip: s.isBangla ? 'ডাউনলোড PDF' : 'Download PDF',
+                                    onPressed: () => _downloadInvoicePdf(context, inv, s),
+                                    icon: const Icon(Icons.download_rounded, color: AppColors.brand),
+                                  ),
+                                  onTap: () => _showInvoiceActions(context, inv, s),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
-                  onTap: () => _showInvoiceActions(context, inv, s),
                 ),
-              ),
+              ],
             ),
+          ),
             ],
           ),
         ),
@@ -368,7 +456,7 @@ Future<void> _showInvoiceActions(
       return AlertDialog(
         title: Text(
           strings.isBangla ? 'ইনভয়েস ডিটেইলস' : 'Invoice Details',
-          style: GoogleFonts.plusJakartaSans(
+          style: GoogleFonts.ibmPlexSans(
             fontSize: 18,
             fontWeight: FontWeight.w800,
           ),
@@ -784,7 +872,7 @@ pw.Widget _pdfWatermark(String text) {
             style: pw.TextStyle(
               fontSize: 72,
               fontWeight: pw.FontWeight.bold,
-              color: PdfColor.fromHex('#1E3A8A'),
+              color: PdfColor.fromHex('#0B6E6A'),
             ),
           ),
         ),
@@ -794,12 +882,20 @@ pw.Widget _pdfWatermark(String text) {
 }
 
 class _PlanDef {
-  const _PlanDef(this.name, this.price, this.period, this.duration, {required this.rides});
+  const _PlanDef(
+    this.name,
+    this.price,
+    this.period,
+    this.duration, {
+    required this.rides,
+    this.tag,
+  });
   final String name;
   final int price;
   final String period;
   final Duration duration;
   final String rides;
+  final String? tag;
 }
 
 class _PlanTile extends StatelessWidget {
@@ -838,9 +934,28 @@ class _PlanTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (plan.tag != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: highlight
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : AppColors.accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  plan.tag!,
+                  style: GoogleFonts.ibmPlexSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: highlight ? Colors.white : AppColors.accent,
+                  ),
+                ),
+              ),
             Text(
               plan.name,
-              style: GoogleFonts.plusJakartaSans(
+              style: GoogleFonts.ibmPlexSans(
                 fontWeight: FontWeight.w800,
                 fontSize: 18,
                 color: highlight ? Colors.white : AppColors.brand,
@@ -852,7 +967,7 @@ class _PlanTile extends StatelessWidget {
               children: [
                 Text(
                   '৳${NumberFormat('#,##0').format(plan.price)}',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     fontWeight: FontWeight.w800,
                     fontSize: 26,
                     color: highlight ? Colors.white : AppColors.ink,
@@ -861,7 +976,7 @@ class _PlanTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   plan.period,
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     color: highlight ? Colors.white70 : AppColors.muted,
                   ),
                 ),
@@ -900,7 +1015,7 @@ class _PlanTile extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.plusJakartaSans(
+              style: GoogleFonts.ibmPlexSans(
                 color: highlight ? Colors.white : AppColors.muted,
                 fontWeight: FontWeight.w600,
               ),
@@ -952,7 +1067,7 @@ class _SubscriptionDetailsScreenState extends State<_SubscriptionDetailsScreen> 
               children: [
                 Text(
                   '${p.name} Subscription',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     color: Colors.white,
                     fontSize: 31 * 0.62,
                     fontWeight: FontWeight.w800,
@@ -961,7 +1076,7 @@ class _SubscriptionDetailsScreenState extends State<_SubscriptionDetailsScreen> 
                 const SizedBox(height: 12),
                 Text(
                   '৳${NumberFormat('#,##0').format(p.price)} ${p.period}',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
@@ -978,7 +1093,7 @@ class _SubscriptionDetailsScreenState extends State<_SubscriptionDetailsScreen> 
           const SizedBox(height: 18),
           Text(
             s.isBangla ? 'Billing Period' : 'Billing Period',
-            style: GoogleFonts.plusJakartaSans(fontSize: 29 * 0.62, fontWeight: FontWeight.w700),
+            style: GoogleFonts.ibmPlexSans(fontSize: 29 * 0.62, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           Card(
@@ -996,7 +1111,7 @@ class _SubscriptionDetailsScreenState extends State<_SubscriptionDetailsScreen> 
           const SizedBox(height: 12),
           Text(
             s.isBangla ? 'Payment Method' : 'Payment Method',
-            style: GoogleFonts.plusJakartaSans(fontSize: 29 * 0.62, fontWeight: FontWeight.w700),
+            style: GoogleFonts.ibmPlexSans(fontSize: 29 * 0.62, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           _payOption('mobile', 'Mobile Banking', 'bKash, Nagad, Rocket'),
@@ -1027,7 +1142,7 @@ class _SubscriptionDetailsScreenState extends State<_SubscriptionDetailsScreen> 
         children: [
           const Icon(Icons.check_circle_rounded, color: Color(0xFFBFDBFE), size: 20),
           const SizedBox(width: 8),
-          Text(t, style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w600)),
+          Text(t, style: GoogleFonts.ibmPlexSans(color: Colors.white, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -1046,12 +1161,12 @@ class _SubscriptionDetailsScreenState extends State<_SubscriptionDetailsScreen> 
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: GoogleFonts.plusJakartaSans(color: AppColors.muted)),
+              Text(label, style: GoogleFonts.ibmPlexSans(color: AppColors.muted)),
               Text(
                 value,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 22 * 0.62),
+                style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w800, fontSize: 22 * 0.62),
               ),
             ],
           ),
@@ -1090,8 +1205,8 @@ class _SubscriptionDetailsScreenState extends State<_SubscriptionDetailsScreen> 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 26 * 0.62)),
-                    Text(subtitle, style: GoogleFonts.plusJakartaSans(color: AppColors.muted)),
+                    Text(title, style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w800, fontSize: 26 * 0.62)),
+                    Text(subtitle, style: GoogleFonts.ibmPlexSans(color: AppColors.muted)),
                   ],
                 ),
               ),
@@ -1150,7 +1265,7 @@ class _VehicleTab extends StatelessWidget {
               const SizedBox(width: 7),
               Text(
                 label,
-                style: GoogleFonts.plusJakartaSans(
+                style: GoogleFonts.ibmPlexSans(
                   fontWeight: FontWeight.w700,
                   color: selected ? AppColors.ink : AppColors.muted,
                 ),

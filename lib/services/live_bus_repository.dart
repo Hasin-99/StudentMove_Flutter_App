@@ -31,6 +31,9 @@ class LiveBusRepository extends ChangeNotifier {
           'heading': d['heading'],
           'speed_kmph': d['speedKmph'],
           'source': d['source'],
+          'route_name': d['routeName'],
+          'status': d['status'],
+          'delay_minutes': d['delayMinutes'],
           'updated_at': updatedAt is Timestamp
               ? updatedAt.toDate().toIso8601String()
               : DateTime.now().toIso8601String(),
@@ -69,6 +72,9 @@ class LiveBusRepository extends ChangeNotifier {
           'heading': d['heading'],
           'speed_kmph': d['speedKmph'],
           'source': d['source'],
+          'route_name': d['routeName'],
+          'status': d['status'],
+          'delay_minutes': d['delayMinutes'],
           'updated_at': updatedAt is Timestamp
               ? updatedAt.toDate().toIso8601String()
               : DateTime.now().toIso8601String(),

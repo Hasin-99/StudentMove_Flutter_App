@@ -97,7 +97,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
               position: LatLng(b.lat, b.lng),
               infoWindow: InfoWindow(
                 title: b.busCode,
-                snippet: '${b.speedKmph.toStringAsFixed(0)} km/h',
+                snippet: '${b.gpsLabel} · ${b.speedKmph.toStringAsFixed(0)} km/h · ${b.etaText}',
               ),
               icon: busIcon,
               rotation: b.heading,
@@ -134,6 +134,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
     final loc = context.watch<LocaleProvider>();
     final liveRepo = context.watch<LiveBusRepository>();
     final s = AppStrings(loc.locale);
+    final buses = liveRepo.buses;
 
     final map = Stack(
       fit: StackFit.expand,
@@ -147,7 +148,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
               children: [
                 Text(
                   'Map preview is not supported on macOS yet.',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     fontWeight: FontWeight.w700,
                     color: AppColors.ink,
                   ),
@@ -155,7 +156,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                 const SizedBox(height: 6),
                 Text(
                   'Live location is still tracked from driver updates. Open in Google Maps for full map view.',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     color: AppColors.muted,
                     fontSize: 13,
                   ),
@@ -185,15 +186,19 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
             decoration: BoxDecoration(
-              color: const Color(0xFF06B6D4),
+              color: AppColors.brandLight,
               borderRadius: BorderRadius.circular(14),
-              boxShadow: const [
-                BoxShadow(color: Color(0x2206B6D4), blurRadius: 12, offset: Offset(0, 6)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.brandLight.withValues(alpha: 0.28),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
               ],
             ),
             child: Text(
               s.isBangla ? 'রিয়েল-টাইম বাস ট্র্যাকিং' : 'Real-time bus Tracking',
-              style: GoogleFonts.plusJakartaSans(
+              style: GoogleFonts.ibmPlexSans(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
@@ -217,7 +222,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                 avatar: const Icon(Icons.schedule_rounded, size: 18),
                 label: Text(
                   '${st.name} · ${st.eta}',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -254,9 +259,28 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                   ),
                   Text(
                     s.isBangla ? 'বাস ট্র্যাকিং' : 'Bus Tracking',
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 36 * 0.62),
+                    style: GoogleFonts.syne(fontWeight: FontWeight.w800, fontSize: 22),
                   ),
                   const SizedBox(height: 10),
+                  if (buses.isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: buses.take(4).map((b) {
+                        final color = switch (b.gpsFreshness) {
+                          GpsFreshness.live => AppColors.brand,
+                          GpsFreshness.stale => AppColors.accent,
+                          GpsFreshness.waiting => AppColors.muted,
+                          GpsFreshness.offline => AppColors.danger,
+                        };
+                        return Chip(
+                          avatar: Icon(Icons.circle, size: 10, color: color),
+                          label: Text('${b.busCode} · ${b.gpsLabel}'),
+                          visualDensity: VisualDensity.compact,
+                        );
+                      }).toList(),
+                    ),
+                  if (buses.isNotEmpty) const SizedBox(height: 10),
                   Divider(color: AppColors.border),
                   const SizedBox(height: 10),
                   ListTile(
@@ -267,16 +291,18 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                       child: Icon(Icons.person_rounded, color: AppColors.ink),
                     ),
                     title: Text(
-                      'Cameron Williamson',
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18 * 0.9),
+                      buses.isNotEmpty ? buses.first.busCode : 'Campus shuttle',
+                      style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w800, fontSize: 18 * 0.9),
                     ),
                     subtitle: Text(
-                      s.isBangla ? 'বাস ড্রাইভার' : 'Bus Driver',
-                      style: GoogleFonts.plusJakartaSans(color: AppColors.muted),
+                      buses.isNotEmpty
+                          ? buses.first.etaText
+                          : (s.isBangla ? 'বাস ড্রাইভার' : 'Waiting for live GPS'),
+                      style: GoogleFonts.ibmPlexSans(color: AppColors.muted),
                     ),
                     trailing: const CircleAvatar(
                       radius: 22,
-                      backgroundColor: Color(0xFF3B82F6),
+                      backgroundColor: AppColors.brand,
                       child: Icon(Icons.call_rounded, color: Colors.white),
                     ),
                   ),
@@ -296,13 +322,13 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                         st.name == 'DSC'
                             ? (s.isBangla ? 'আনুমানিক পৌঁছানোর সময়' : 'Estimated Arrival')
                             : (s.isBangla ? 'ঠিকানা' : 'Address'),
-                        style: GoogleFonts.plusJakartaSans(color: AppColors.muted, fontSize: 13),
+                        style: GoogleFonts.ibmPlexSans(color: AppColors.muted, fontSize: 13),
                       ),
                       trailing: Text(
                         st.name == 'DSC'
                             ? (s.isBangla ? '03:00 PM (সর্বোচ্চ ২০ মিনিট)' : '03:00 PM (Max 20 min)')
                             : (s.isBangla ? 'DIU, স্মার্ট সিটি, আশুলিয়া' : 'DIU, Smart City, Ashulia'),
-                        style: GoogleFonts.plusJakartaSans(
+                        style: GoogleFonts.ibmPlexSans(
                           color: AppColors.ink,
                           fontWeight: FontWeight.w600,
                         ),
@@ -313,7 +339,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
                     const SizedBox(height: 10),
                     Text(
                       'Live status: ${liveRepo.lastError}',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.ibmPlexSans(
                         color: Colors.red.shade400,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

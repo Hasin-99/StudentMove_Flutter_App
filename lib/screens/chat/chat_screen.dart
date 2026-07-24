@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/ai_assistant_service.dart';
 import '../../services/chat_repository.dart';
 import '../../theme/app_theme.dart';
 
@@ -16,22 +17,37 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
+  final List<({String text, bool agent, DateTime time})> _aiMessages = [];
+  late final TabController _tabs;
   Timer? _poller;
+  bool _aiThinking = false;
 
   @override
   void initState() {
     super.initState();
+    _tabs = TabController(length: 2, vsync: this);
+    for (final h in AiAssistantService.history) {
+      _aiMessages.add((
+        text: h.text,
+        agent: h.role == 'assistant',
+        time: DateTime.now(),
+      ));
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshChat();
-      _poller = Timer.periodic(const Duration(seconds: 7), (_) => _refreshChat());
+      _poller = Timer.periodic(const Duration(seconds: 7), (_) {
+        if (_tabs.index == 1) _refreshChat();
+      });
     });
   }
 
   @override
   void dispose() {
     _poller?.cancel();
+    _tabs.dispose();
     _messageController.dispose();
     super.dispose();
   }
@@ -39,10 +55,25 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _send() async {
     final t = _messageController.text.trim();
     if (t.isEmpty) return;
+    _messageController.clear();
+
+    if (_tabs.index == 0) {
+      setState(() {
+        _aiMessages.add((text: t, agent: false, time: DateTime.now()));
+        _aiThinking = true;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 420));
+      final answer = AiAssistantService.reply(t);
+      if (!mounted) return;
+      setState(() {
+        _aiThinking = false;
+        _aiMessages.add((text: answer, agent: true, time: DateTime.now()));
+      });
+      return;
+    }
+
     final email = context.read<AuthProvider>().userEmail;
     if (email == null || email.isEmpty) return;
-
-    _messageController.clear();
     await context.read<ChatRepository>().sendMessage(email: email, text: t);
   }
 
@@ -61,159 +92,235 @@ class _ChatScreenState extends State<ChatScreen> {
     final maxWidth = AppLayout.contentMaxWidthFor(context);
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxWidth),
             child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(hPad, 10, hPad, 4),
-              child: Row(
-                children: [
-                  _RoundActionButton(
-                    icon: Icons.arrow_back_ios_new_rounded,
-                    onTap: () {
-                      if (Navigator.canPop(context)) {
-                        Navigator.pop(context);
-                        return;
-                      }
-                      widget.onBack?.call();
-                    },
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(hPad, 10, hPad, 4),
+                  child: Row(
+                    children: [
+                      _RoundActionButton(
+                        icon: Icons.arrow_back_ios_new_rounded,
+                        onTap: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                            return;
+                          }
+                          widget.onBack?.call();
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor:
+                            AppColors.brandLight.withValues(alpha: 0.18),
+                        child: Icon(
+                          _tabs.index == 0
+                              ? Icons.smart_toy_rounded
+                              : Icons.support_agent_rounded,
+                          color: AppColors.brand,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'StudentMove Chat',
+                              style: GoogleFonts.syne(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                            Text(
+                              'Dhaka · AI + Support',
+                              style: GoogleFonts.ibmPlexSans(
+                                fontSize: 13,
+                                color: AppColors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_tabs.index == 0)
+                        _RoundActionButton(
+                          icon: Icons.delete_outline_rounded,
+                          onTap: () {
+                            AiAssistantService.clear();
+                            setState(() => _aiMessages.clear());
+                          },
+                        )
+                      else
+                        _RoundActionButton(
+                          icon: Icons.refresh_rounded,
+                          onTap: _refreshChat,
+                        ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.brandLight.withValues(alpha: 0.18),
-                    child: const Icon(Icons.remove_red_eye_rounded, color: AppColors.brand),
+                ),
+                TabBar(
+                  controller: _tabs,
+                  onTap: (_) => setState(() {}),
+                  labelColor: AppColors.brand,
+                  unselectedLabelColor: AppColors.muted,
+                  indicatorColor: AppColors.accent,
+                  labelStyle:
+                      GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w700),
+                  tabs: const [
+                    Tab(text: 'AI Assistant'),
+                    Tab(text: 'Support'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabs,
+                    children: [
+                      _aiMessages.isEmpty
+                          ? ListView(
+                              padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 10),
+                              children: const [
+                                _SampleBubble(
+                                  text:
+                                      'Ask about routes, fares, schedules, or student passes.',
+                                  agent: true,
+                                ),
+                                _SampleBubble(
+                                  text: 'How much is the monthly pass?',
+                                  agent: false,
+                                ),
+                              ],
+                            )
+                          : ListView.builder(
+                              reverse: true,
+                              padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 10),
+                              itemCount:
+                                  _aiMessages.length + (_aiThinking ? 1 : 0),
+                              itemBuilder: (context, i) {
+                                if (_aiThinking && i == 0) {
+                                  return const _Bubble(
+                                    text: 'Thinking…',
+                                    agent: true,
+                                    time: null,
+                                  );
+                                }
+                                final idx = _aiThinking
+                                    ? _aiMessages.length - i
+                                    : _aiMessages.length - 1 - i;
+                                final msg = _aiMessages[idx];
+                                return _Bubble(
+                                  text: msg.text,
+                                  agent: msg.agent,
+                                  time: msg.time,
+                                );
+                              },
+                            ),
+                      messages.isEmpty && repo.loading
+                          ? const Center(child: CircularProgressIndicator())
+                          : messages.isEmpty
+                              ? ListView(
+                                  padding:
+                                      EdgeInsets.fromLTRB(hPad, 24, hPad, 10),
+                                  children: const [
+                                    _SampleBubble(
+                                      text: 'How can I help with your ride?',
+                                      agent: true,
+                                    ),
+                                  ],
+                                )
+                              : ListView.builder(
+                                  reverse: true,
+                                  padding:
+                                      EdgeInsets.fromLTRB(hPad, 12, hPad, 10),
+                                  itemCount: messages.length,
+                                  itemBuilder: (context, i) {
+                                    final msg =
+                                        messages[messages.length - 1 - i];
+                                    return _Bubble(
+                                      text: msg.text,
+                                      agent: msg.fromAdmin,
+                                      time: msg.createdAt,
+                                    );
+                                  },
+                                ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                if (repo.lastError != null && _tabs.index == 1)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                    child: Text(
+                      repo.lastError!,
+                      style: GoogleFonts.ibmPlexSans(
+                        fontSize: 12,
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    hPad,
+                    8,
+                    hPad,
+                    8 + MediaQuery.paddingOf(context).bottom,
+                  ),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: AppTheme.elev1,
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          'Chat Support',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 18 * 0.95,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF1F2937),
+                        Icon(
+                          _tabs.index == 0
+                              ? Icons.auto_awesome_rounded
+                              : Icons.attach_file_rounded,
+                          color: AppColors.muted,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            minLines: 1,
+                            maxLines: 4,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => _send(),
+                            style: GoogleFonts.ibmPlexSans(fontSize: 15),
+                            decoration: InputDecoration(
+                              hintText: _tabs.index == 0
+                                  ? 'Ask the AI assistant…'
+                                  : 'Message support…',
+                              hintStyle: GoogleFonts.ibmPlexSans(
+                                color: AppColors.muted,
+                              ),
+                              border: InputBorder.none,
+                            ),
                           ),
                         ),
-                        Text(
-                          'Uttara, Dhaka',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            color: const Color(0xFF6B7280),
+                        FilledButton(
+                          onPressed: _send,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            minimumSize: const Size(42, 42),
+                            padding: EdgeInsets.zero,
+                            shape: const CircleBorder(),
                           ),
+                          child: const Icon(Icons.send_rounded, size: 20),
                         ),
                       ],
                     ),
                   ),
-                  _RoundActionButton(icon: Icons.more_vert_rounded, onTap: _refreshChat),
-                ],
-              ),
-            ),
-            Expanded(
-              child: messages.isEmpty && repo.loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : messages.isEmpty
-                      ? ListView(
-                          padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 10),
-                          children: const [
-                            _SampleBubble(
-                              text: 'How can I book my car?',
-                              agent: false,
-                            ),
-                            _SampleBubble(
-                              text: 'How Can I help You? Sir!',
-                              agent: true,
-                            ),
-                            _SampleBubble(text: 'Hi!', agent: false),
-                            _SampleBubble(text: 'Hi!', agent: true),
-                          ],
-                        )
-                  : ListView.builder(
-                      reverse: true,
-                      padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 10),
-                      itemCount: messages.length,
-                      itemBuilder: (context, i) {
-                        final msg = messages[messages.length - 1 - i];
-                        return _Bubble(
-                          text: msg.text,
-                          agent: msg.fromAdmin,
-                          time: msg.createdAt,
-                        );
-                      },
-                    ),
-            ),
-            if (repo.lastError != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                child: Text(
-                  repo.lastError!,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    color: Colors.red.shade600,
-                    fontWeight: FontWeight.w600,
-                  ),
                 ),
-              ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                hPad,
-                8,
-                hPad,
-                8 + MediaQuery.paddingOf(context).bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.attach_file_rounded, color: Color(0xFF9CA3AF)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        minLines: 1,
-                        maxLines: 4,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _send(),
-                        style: GoogleFonts.plusJakartaSans(fontSize: 15),
-                        decoration: InputDecoration(
-                          hintText: 'Type a message...',
-                          hintStyle: GoogleFonts.plusJakartaSans(color: AppColors.muted),
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                    FilledButton(
-                      onPressed: _send,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.brand,
-                        minimumSize: const Size(42, 42),
-                        padding: EdgeInsets.zero,
-                        shape: const CircleBorder(),
-                        elevation: 2,
-                      ),
-                      child: const Icon(Icons.send_rounded, size: 20),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+              ],
             ),
           ),
         ),
@@ -231,7 +338,7 @@ class _RoundActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFF3F4F6),
+      color: AppColors.paper,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
         side: const BorderSide(color: AppColors.border),
@@ -239,8 +346,6 @@ class _RoundActionButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
-        splashColor: AppColors.brandLight.withValues(alpha: 0.16),
-        highlightColor: AppColors.brandLight.withValues(alpha: 0.1),
         child: SizedBox(
           width: 44,
           height: 44,
@@ -255,7 +360,7 @@ class _Bubble extends StatelessWidget {
   const _Bubble({required this.text, required this.agent, required this.time});
   final String text;
   final bool agent;
-  final DateTime time;
+  final DateTime? time;
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +370,8 @@ class _Bubble extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
+          constraints:
+              BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
           decoration: const BoxDecoration(
             color: AppColors.brand,
             borderRadius: BorderRadius.only(
@@ -280,18 +386,23 @@ class _Bubble extends StatelessWidget {
             children: [
               Text(
                 text,
-                style: GoogleFonts.plusJakartaSans(
+                style: GoogleFonts.ibmPlexSans(
                   fontSize: 14,
                   height: 1.45,
                   color: Colors.white,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                TimeOfDay.fromDateTime(time).format(context),
-                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white70),
-              ),
+              if (time != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  TimeOfDay.fromDateTime(time!).format(context),
+                  style: GoogleFonts.ibmPlexSans(
+                    fontSize: 11,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -306,37 +417,42 @@ class _Bubble extends StatelessWidget {
           const CircleAvatar(
             radius: 16,
             backgroundColor: AppColors.brand,
-            child: Icon(Icons.person_rounded, color: Colors.white, size: 17),
+            child: Icon(Icons.smart_toy_rounded, color: Colors.white, size: 17),
           ),
           const SizedBox(width: 8),
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.72),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+              ),
               decoration: BoxDecoration(
-                color: const Color(0xFFE5E7EB),
+                color: AppColors.paper,
                 borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     text,
-                    style: GoogleFonts.plusJakartaSans(
+                    style: GoogleFonts.ibmPlexSans(
                       fontSize: 14,
                       height: 1.45,
-                      color: const Color(0xFF1F2937),
+                      color: AppColors.ink,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    TimeOfDay.fromDateTime(time).format(context),
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      color: const Color(0xFF64748B),
+                  if (time != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      TimeOfDay.fromDateTime(time!).format(context),
+                      style: GoogleFonts.ibmPlexSans(
+                        fontSize: 11,
+                        color: AppColors.muted,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -355,57 +471,6 @@ class _SampleBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!agent) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: const BoxDecoration(
-            color: AppColors.brand,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(18),
-              topRight: Radius.circular(18),
-              bottomLeft: Radius.circular(18),
-              bottomRight: Radius.circular(4),
-            ),
-          ),
-          child: Text(
-            text,
-            style: GoogleFonts.plusJakartaSans(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 16,
-            backgroundColor: AppColors.brand,
-            child: Icon(Icons.person_rounded, color: Colors.white, size: 17),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              text,
-              style: GoogleFonts.plusJakartaSans(
-                color: AppColors.ink,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return _Bubble(text: text, agent: agent, time: null);
   }
 }

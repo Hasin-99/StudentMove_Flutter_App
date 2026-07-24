@@ -22,7 +22,7 @@ class OfflineBanner extends StatelessWidget {
               Expanded(
                 child: Text(
                   strings.offlineMessage,
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     color: Colors.white,
                     fontSize: 13,
                     height: 1.35,

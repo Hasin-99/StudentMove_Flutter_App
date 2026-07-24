@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import '../core/app_error.dart';
 import '../data/chat_message.dart';
 
 class ChatRepository extends ChangeNotifier {
@@ -45,13 +46,13 @@ class ChatRepository extends ChangeNotifier {
         _loading = false;
         _lastError = null;
         notifyListeners();
-      }, onError: (e) {
-        _lastError = 'Could not sync with admin chat: $e';
+      }, onError: (e, st) {
+        _lastError = ErrorMapper.from(e, st).message;
         _loading = false;
         notifyListeners();
       });
-    } catch (e) {
-      _lastError = 'Could not sync with admin chat: $e';
+    } catch (e, st) {
+      _lastError = ErrorMapper.from(e, st).message;
     }
 
     _loading = false;
@@ -86,8 +87,9 @@ class ChatRepository extends ChangeNotifier {
         'createdAt': FieldValue.serverTimestamp(),
       });
       return true;
-    } catch (e) {
-      _lastError = 'Message sent locally, server not reachable: $e';
+    } catch (e, st) {
+      _lastError =
+          'Message saved on device. ${ErrorMapper.from(e, st).message}';
       notifyListeners();
       return false;
     }
