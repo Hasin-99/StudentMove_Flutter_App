@@ -45,7 +45,9 @@ service cloud.firestore {
 
     match /liveBuses/{busId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      // Drivers and admins may publish GPS; students read-only.
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
     }
 
     match /chatRooms/{roomId} {
@@ -57,6 +59,45 @@ service cloud.firestore {
         allow create: if isSignedIn() && roomId == request.auth.uid;
         allow update, delete: if isAdmin();
       }
+    }
+
+    match /subscriptions/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /invoices/{invoiceId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid) || isAdmin();
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /offers/{offerId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     match /auditEvents/{eventId} {

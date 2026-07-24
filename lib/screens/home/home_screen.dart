@@ -10,8 +10,10 @@ import '../../providers/auth_provider.dart';
 import '../../providers/connectivity_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/notification_inbox_provider.dart';
+import '../../providers/saved_routes_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/brand_logo_3d.dart';
 import '../../widgets/feedback_sheet.dart';
 import '../../widgets/offline_banner.dart';
 import '../booking/booking_screen.dart';
@@ -104,6 +106,13 @@ class _HomeTabContent extends StatefulWidget {
 }
 
 class _HomeTabContentState extends State<_HomeTabContent> {
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   void _openQuickActionsSheet(AppStrings s) {
     showGeneralDialog<void>(
       context: context,
@@ -236,15 +245,15 @@ class _HomeTabContentState extends State<_HomeTabContent> {
     final auth = context.watch<AuthProvider>();
     final inbox = context.watch<NotificationInboxProvider>();
     final sub = context.watch<SubscriptionProvider>();
+    final savedProvider = context.watch<SavedRoutesProvider>();
     final hPad = AppLayout.pageHPadFor(context);
     final topPad = AppLayout.pageTopPadFor(context);
     final maxWidth = AppLayout.contentMaxWidthFor(context);
     final narrow = MediaQuery.sizeOf(context).width < 360;
     final name = auth.userName ?? 'Traveler';
-    final savedRoutes = <String>[
-      'Uttara to DSC',
-      'Uttara to DU',
-    ];
+    final savedRoutes = savedProvider.items.isEmpty
+        ? <String>['Uttara to DSC', 'Uttara to DU']
+        : savedProvider.items.take(4).toList();
 
     return Center(
       child: ConstrainedBox(
@@ -268,9 +277,11 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                     IconButton(
                       onPressed: () => _openQuickActionsSheet(s),
                       icon: const Icon(Icons.menu_rounded),
-                      color: const Color(0xFF1F2937),
+                      color: AppColors.ink,
                     ),
                     const Spacer(),
+                    const BrandLogo3D(size: 42, float: false),
+                    const SizedBox(width: 10),
                     InkWell(
                       borderRadius: BorderRadius.circular(20),
                       onTap: () {
@@ -293,9 +304,9 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                             ? null
                             : Text(
                                 name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                                style: GoogleFonts.plusJakartaSans(
+                                style: GoogleFonts.ibmPlexSans(
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF2563EB),
+                                  color: AppColors.brandDark,
                                 ),
                               ),
                       ),
@@ -304,39 +315,107 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  s.isBangla ? 'ফিরে আসায় স্বাগতম!' : 'Welcome back!',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: narrow ? 20 : 22 * 1.1,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
+                  s.isBangla ? 'ফিরে আসায় স্বাগতম!' : _greeting(),
+                  style: GoogleFonts.syne(
+                    fontSize: narrow ? 20 : 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   s.isBangla
-                      ? 'আজকের যাত্রা পরিকল্পনা করি'
-                      : 'Ready to plan your journey?',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: narrow ? 15 : 18 * 0.95,
+                      ? 'ঢাকায় ইচ্ছা করে চলুন · $name'
+                      : 'Move through Dhaka with intent · $name',
+                  style: GoogleFonts.ibmPlexSans(
+                    fontSize: narrow ? 14 : 15,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2563EB),
+                    color: AppColors.brand,
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _RailChip(
+                        icon: Icons.map_rounded,
+                        label: s.isBangla ? 'লাইভ ম্যাপ' : 'Live map',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const BusTrackingScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _RailChip(
+                        icon: Icons.event_seat_rounded,
+                        label: s.isBangla ? 'বুক' : 'Book',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const BookingScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _RailChip(
+                        icon: Icons.card_membership_rounded,
+                        label: s.isBangla ? 'প্ল্যান' : 'Plans',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const SubscribeScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _RailChip(
+                        icon: Icons.notifications_rounded,
+                        label: s.isBangla ? 'অ্যালার্ট' : 'Alerts',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => NotificationsScreen(strings: s),
+                            ),
+                          );
+                        },
+                      ),
+                      _RailChip(
+                        icon: Icons.chat_bubble_rounded,
+                        label: s.isBangla ? 'চ্যাট' : 'Chat',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ChatScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
                 Text(
                   s.isBangla ? 'ড্যাশবোর্ড' : 'Dashboard',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 36 * 0.55,
+                  style: GoogleFonts.syne(
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1F2937),
+                    color: AppColors.ink,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   s.isBangla ? 'আজ কী করতে চান?' : 'What would you like to do?',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     fontSize: 15,
-                    color: const Color(0xFF6B7280),
+                    color: AppColors.muted,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -479,7 +558,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                 const SizedBox(height: 18),
                 Text(
                   s.isBangla ? 'সাম্প্রতিক কার্যকলাপ' : 'Recent Activity',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     fontSize: 36 * 0.55,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1F2937),
@@ -501,7 +580,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                           children: [
                             Text(
                               'Past Routes',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: GoogleFonts.ibmPlexSans(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16 * 0.95,
                               ),
@@ -521,7 +600,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                                     Expanded(
                                       child: Text(
                                         r,
-                                        style: GoogleFonts.plusJakartaSans(
+                                        style: GoogleFonts.ibmPlexSans(
                                           fontSize: 14,
                                           color: const Color(0xFF4B5563),
                                         ),
@@ -560,7 +639,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                             children: [
                               Text(
                                 sub.hasActiveSubscription ? s.planActiveTitle : s.feedbackSubmitted,
-                                style: GoogleFonts.plusJakartaSans(
+                                style: GoogleFonts.ibmPlexSans(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 16 * 0.95,
                                 ),
@@ -570,7 +649,7 @@ class _HomeTabContentState extends State<_HomeTabContent> {
                                 sub.hasActiveSubscription
                                     ? s.thanksPlanActive
                                     : s.thankYouForSharing,
-                                style: GoogleFonts.plusJakartaSans(
+                                style: GoogleFonts.ibmPlexSans(
                                   fontSize: 14,
                                   color: const Color(0xFF6B7280),
                                 ),
@@ -618,6 +697,37 @@ class _HomeTabContentState extends State<_HomeTabContent> {
   }
 }
 
+class _RailChip extends StatelessWidget {
+  const _RailChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ActionChip(
+        avatar: Icon(icon, size: 18, color: AppColors.brand),
+        label: Text(label),
+        onPressed: onTap,
+        backgroundColor: AppColors.card,
+        side: const BorderSide(color: AppColors.border),
+        labelStyle: GoogleFonts.ibmPlexSans(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: AppColors.ink,
+        ),
+      ),
+    );
+  }
+}
+
 class _QuickActionTile extends StatelessWidget {
   const _QuickActionTile({
     required this.icon,
@@ -634,10 +744,10 @@ class _QuickActionTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      leading: Icon(icon, color: const Color(0xFF2563EB)),
+      leading: Icon(icon, color: AppColors.brandDark),
       title: Text(
         title,
-        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        style: GoogleFonts.ibmPlexSans(fontWeight: FontWeight.w700),
       ),
       trailing: const Icon(Icons.chevron_right_rounded),
     );
@@ -687,7 +797,7 @@ class _HomeActionCard extends StatelessWidget {
                         title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
+                        style: GoogleFonts.ibmPlexSans(
                           fontWeight: FontWeight.w700,
                           fontSize: 16 * 0.95,
                           color: textColor,
@@ -711,7 +821,7 @@ class _HomeActionCard extends StatelessWidget {
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.ibmPlexSans(
                     color: textColor.withValues(alpha: 0.85),
                     fontSize: 14,
                   ),

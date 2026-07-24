@@ -54,8 +54,31 @@ This document maps legacy REST contracts to Firebase data access contracts used 
   - App mapping fields:
     - `text`, `senderRole`, `createdAt`
 
-## Production Constraints
+## Bookings
 
-- Sensitive auth state is not persisted in `SharedPreferences`; Firebase SDK session is source of truth.
-- Firestore write access is constrained by Security Rules.
-- Admin/privileged writes should flow through Cloud Functions or admin-only role rules.
+- Legacy: ride booking with seat counts / cancel
+  - Firebase source: collection `bookings`
+  - App mapping fields:
+    - `userId`, `code`, `route`, `busNumber`, `from`, `to`, `travelDate`, `departureTime`, `seats`, `seatPreference`, `fare`, `status`
+
+## Feedback
+
+- Legacy: student feedback + admin reply
+  - Firebase source: collection `feedback`
+  - App mapping fields:
+    - `userId`, `subject`, `message`, `rating`, `status`, `reply`
+
+## Offers
+
+- Legacy: active promotions
+  - Firebase source: collection `offers`
+  - App mapping fields:
+    - `title`, `description`, `discountPercent`, `validUntil`, `isActive`
+
+## Subscriptions
+
+- Legacy plans: Weekly ৳350 / Monthly ৳1200 / Single ৳30
+  - Firebase source: `subscriptions/{uid}` + `subscriptions/{uid}/invoices`
+  - App mapping fields:
+    - `planName`, `status`, `validUntil`, invoice `amount`, `paymentMethod`, `paidAt`
+

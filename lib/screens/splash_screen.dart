@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
+import '../widgets/brand_logo_3d.dart';
 
-/// Brand splash: lavender background + provided asset (blue disc, car, StudentMove).
+/// Brand splash with 3D logo and atmospheric depth.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -10,19 +13,29 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  static const _bg = Color(0xFFF1F4F8);
-  static const _brand = Color(0xFF3B82F6);
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   bool _hasNavigated = false;
+  late final AnimationController _motion;
 
   @override
   void initState() {
     super.initState();
+    _motion = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..forward();
     _navigateToNext();
   }
 
+  @override
+  void dispose() {
+    _motion.dispose();
+    super.dispose();
+  }
+
   Future<void> _navigateToNext() async {
-    await Future.delayed(const Duration(milliseconds: 2200));
+    await Future.delayed(const Duration(milliseconds: 2600));
     if (!mounted || _hasNavigated) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -32,98 +45,92 @@ class _SplashScreenState extends State<SplashScreen> {
     _hasNavigated = true;
     final targetRoute = authProvider.isAuthenticated ? '/home' : '/signin';
     final nav = Navigator.of(context, rootNavigator: true);
-
-    // Keep at least one route in history; avoids empty-stack navigator assertions.
     nav.pushNamedAndRemoveUntil(targetRoute, (_) => false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
-      body: SafeArea(
-        child: SizedBox.expand(
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 128,
-                      height: 128,
-                      decoration: BoxDecoration(
-                        color: _brand,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _brand.withValues(alpha: 0.26),
-                            blurRadius: 24,
-                            offset: const Offset(0, 14),
+      body: Atmosphere3DBackdrop(
+        child: SafeArea(
+          child: SizedBox.expand(
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.center,
+                  child: FadeTransition(
+                    opacity: CurvedAnimation(
+                      parent: _motion,
+                      curve: Curves.easeOut,
+                    ),
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.86, end: 1).animate(
+                        CurvedAnimation(
+                          parent: _motion,
+                          curve: Curves.easeOutBack,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const BrandLogo3D(size: 148, float: true),
+                          const SizedBox(height: 22),
+                          Text(
+                            'StudentMove',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.syne(
+                              fontSize: 38,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Move through Dhaka with intent.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.ibmPlexSans(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.muted,
+                            ),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.directions_car_outlined,
-                        color: Colors.white,
-                        size: 48,
-                      ),
                     ),
-                    const SizedBox(height: 28),
-                    const Text(
-                      'StudentMove',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 48 * 0.75,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1F2937),
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Your journey starts here',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24 * 0.7,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          color: _brand,
-                          backgroundColor: _brand.withValues(alpha: 0.16),
-                        ),
-                      ),
-                      const SizedBox(height: 68),
-                      Container(
-                        width: 84,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6B7280),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
-              ),
-            ],
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 36),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: AppColors.brand,
+                            backgroundColor:
+                                AppColors.brand.withValues(alpha: 0.16),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          'Smart transport for Dhaka students',
+                          style: GoogleFonts.ibmPlexSans(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

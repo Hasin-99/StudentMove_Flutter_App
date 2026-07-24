@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/app_error.dart';
 import '../core/notification_service.dart';
 import '../core/prefs_keys.dart';
 
@@ -25,9 +26,9 @@ class AuthProvider with ChangeNotifier {
       } else {
         try {
           await _hydrateFromFirebaseUser(user);
-        } catch (e) {
+        } catch (e, st) {
           _isAuthenticated = false;
-          _lastError = 'Session refresh failed: $e';
+          _lastError = ErrorMapper.from(e, st).message;
         }
       }
       notifyListeners();
@@ -97,8 +98,8 @@ class AuthProvider with ChangeNotifier {
       _isAuthenticated = true;
       _lastError = null;
       await _hydrateFromFirebaseUser(cred.user);
-    } catch (e) {
-      _lastError = 'Sign-in failed: $e';
+    } catch (e, st) {
+      _lastError = ErrorMapper.from(e, st).message;
       notifyListeners();
       return;
     }
@@ -162,8 +163,8 @@ class AuthProvider with ChangeNotifier {
       _isAuthenticated = true;
       _lastError = null;
       await _hydrateFromFirebaseUser(cred.user);
-    } catch (e) {
-      _lastError = 'Sign-up failed: $e';
+    } catch (e, st) {
+      _lastError = ErrorMapper.from(e, st).message;
       notifyListeners();
       return;
     }
@@ -199,10 +200,8 @@ class AuthProvider with ChangeNotifier {
       _lastError = null;
       notifyListeners();
       return true;
-    } catch (e) {
-      _lastError = token.trim().isEmpty
-          ? 'Reset email failed: $e'
-          : 'Password reset failed: $e';
+    } catch (e, st) {
+      _lastError = ErrorMapper.from(e, st).message;
       notifyListeners();
       return false;
     }

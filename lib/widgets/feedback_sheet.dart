@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../l10n/app_strings.dart';
+import '../providers/auth_provider.dart';
+import '../services/feedback_repository.dart';
 import '../theme/app_theme.dart';
 
 Future<void> showFeedbackSheet(BuildContext context, AppStrings s) {
+  final uid = context.read<AuthProvider>().userId;
+  context.read<FeedbackRepository>().bindUser(uid);
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -23,26 +27,56 @@ class _FeedbackBody extends StatefulWidget {
 }
 
 class _FeedbackBodyState extends State<_FeedbackBody> {
-  String _category = 'bug';
+  final _subject = TextEditingController();
   final _text = TextEditingController();
-  final _picker = ImagePicker();
-  String? _imageName;
+  int _rating = 5;
+  bool _submitting = false;
 
   @override
   void dispose() {
+    _subject.dispose();
     _text.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _submitting = true);
+    final repo = context.read<FeedbackRepository>();
+    final ok = await repo.submit(
+      subject: _subject.text.trim().isEmpty ? 'App feedback' : _subject.text.trim(),
+      message: _text.text,
+      rating: _rating,
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (ok) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.strings.isBangla
+                ? 'মতামত জমা হয়েছে। ধন্যবাদ!'
+                : 'Feedback submitted. Thank you!',
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(repo.lastError ?? 'Could not submit')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final s = widget.strings;
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final history = context.watch<FeedbackRepository>().items;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.88,
+      initialChildSize: 0.9,
       minChildSize: 0.5,
-      maxChildSize: 0.95,
+      maxChildSize: 0.96,
       builder: (_, scroll) {
         return Container(
           decoration: const BoxDecoration(
@@ -66,31 +100,51 @@ class _FeedbackBodyState extends State<_FeedbackBody> {
               ),
               Text(
                 s.feedbackTitle,
-                style: GoogleFonts.plusJakartaSans(
+                style: GoogleFonts.syne(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
-                s.category,
-                style: GoogleFonts.plusJakartaSans(
+                s.isBangla
+                    ? 'রেটিং দিন এবং আপনার অভিজ্ঞতা লিখুন'
+                    : 'Rate your ride and tell the team what to improve',
+                style: GoogleFonts.ibmPlexSans(color: AppColors.muted),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                s.isBangla ? 'রেটিং' : 'Rating',
+                style: GoogleFonts.ibmPlexSans(
                   fontWeight: FontWeight.w700,
                   color: AppColors.muted,
                   fontSize: 13,
                 ),
               ),
               const SizedBox(height: 8),
-              SegmentedButton<String>(
-                segments: [
-                  ButtonSegment(value: 'bug', label: Text(s.bug)),
-                  ButtonSegment(value: 'suggestion', label: Text(s.suggestion)),
-                  ButtonSegment(value: 'complaint', label: Text(s.complaint)),
-                ],
-                selected: {_category},
-                onSelectionChanged: (set) => setState(() => _category = set.first),
+              Row(
+                children: List.generate(5, (i) {
+                  final star = i + 1;
+                  return IconButton(
+                    onPressed: () => setState(() => _rating = star),
+                    icon: Icon(
+                      star <= _rating
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: AppColors.accent,
+                      size: 32,
+                    ),
+                  );
+                }),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _subject,
+                decoration: InputDecoration(
+                  labelText: s.isBangla ? 'বিষয়' : 'Subject',
+                ),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _text,
                 maxLines: 5,
@@ -99,47 +153,80 @@ class _FeedbackBodyState extends State<_FeedbackBody> {
                   alignLabelWithHint: true,
                 ),
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final img = await _picker.pickImage(source: ImageSource.gallery);
-                  if (img != null) {
-                    setState(() => _imageName = img.name);
-                  }
-                },
-                icon: const Icon(Icons.photo_library_outlined),
-                label: Text(s.addPhoto),
-              ),
-              if (_imageName != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    _imageName!,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      color: AppColors.muted,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               SizedBox(
                 height: 52,
                 child: FilledButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          s.isBangla
-                              ? 'মতামত সার্ভারে সংযুক্ত হলে জমা হবে।'
-                              : 'Feedback submission will be connected in a future release.',
-                        ),
-                      ),
-                    );
-                  },
-                  child: Text(s.submit),
+                  onPressed: _submitting ? null : _submit,
+                  child: _submitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(s.submit),
                 ),
               ),
+              if (history.isNotEmpty) ...[
+                const SizedBox(height: 28),
+                Text(
+                  s.isBangla ? 'ইতিহাস' : 'Your feedback',
+                  style: GoogleFonts.syne(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ...history.map(
+                  (f) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                f.subject,
+                                style: GoogleFonts.ibmPlexSans(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${f.rating}★',
+                              style: GoogleFonts.ibmPlexSans(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(f.message),
+                        if (f.reply != null && f.reply!.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            s.isBangla ? 'টিম রিপ্লাই' : 'Team reply',
+                            style: GoogleFonts.ibmPlexSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.brand,
+                            ),
+                          ),
+                          Text(f.reply!),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );

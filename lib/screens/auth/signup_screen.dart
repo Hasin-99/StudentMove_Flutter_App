@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/brand_logo_3d.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -80,36 +81,47 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final bottomPad = AppLayout.pageBottomPadFor(context);
     final maxWidth = AppLayout.contentMaxWidthFor(context);
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(hPad, topPad, hPad, bottomPad),
-              child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Create Account',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 48 * 0.85,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Fill in your details to get started',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF6B7280),
-                  ),
-                ),
-                const SizedBox(height: 44),
+      body: Atmosphere3DBackdrop(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(hPad, topPad, hPad, bottomPad),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Center(child: BrandLogo3D(size: 88, float: true)),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Create Account',
+                        style: GoogleFonts.syne(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Built for students. Tuned for Dhaka.',
+                        style: GoogleFonts.ibmPlexSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Fill in your details to get started',
+                        style: GoogleFonts.ibmPlexSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
                 _label('Username'),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -252,11 +264,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   height: 56,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
+                      backgroundColor: AppColors.brand,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      shadowColor: const Color(0xFF3B82F6).withValues(alpha: 0.35),
+                      shadowColor: AppColors.brand.withValues(alpha: 0.35),
                       elevation: 6,
                     ),
                     onPressed: _submitting ? null : _signUp,
@@ -280,7 +292,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
                         'or',
-                        style: GoogleFonts.plusJakartaSans(
+                        style: GoogleFonts.ibmPlexSans(
                           color: const Color(0xFF9CA3AF),
                           fontSize: 20 * 0.75,
                           fontWeight: FontWeight.w600,
@@ -297,7 +309,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   children: [
                     Text(
                       'Already have an account? ',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.ibmPlexSans(
                         fontSize: 16 * 0.95,
                         color: const Color(0xFF6B7280),
                       ),
@@ -309,10 +321,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       },
                       child: Text(
                         'Login',
-                        style: GoogleFonts.plusJakartaSans(
+                        style: GoogleFonts.ibmPlexSans(
                           fontSize: 16 * 0.95,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF2563EB),
+                          color: AppColors.brandDark,
                         ),
                       ),
                     ),
@@ -324,6 +336,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ),
         ),
+        ),
       ),
     );
   }
@@ -331,10 +344,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget _label(String text) {
     return Text(
       text,
-      style: GoogleFonts.plusJakartaSans(
+      style: GoogleFonts.ibmPlexSans(
         fontSize: 15,
         fontWeight: FontWeight.w600,
-        color: const Color(0xFF374151),
+        color: AppColors.slate,
       ),
     );
   }
